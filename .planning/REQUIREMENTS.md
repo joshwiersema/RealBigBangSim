@@ -9,37 +9,37 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Rendering
 
-- [ ] **RNDR-01**: Application renders 100K-1M particles in real-time via GPU compute shaders at 30+ FPS
-- [ ] **RNDR-02**: Post-processing pipeline applies bloom, HDR, and tone mapping to produce cinematic glow effects
-- [ ] **RNDR-03**: Each of the 11 cosmological eras has visually distinct shader programs with unique color palettes and particle behaviors
-- [ ] **RNDR-04**: Era transitions crossfade smoothly between visual paradigms (no jarring cuts)
+- [x] **RNDR-01**: Application renders 100K-1M particles in real-time via GPU compute shaders at 30+ FPS
+- [x] **RNDR-02**: Post-processing pipeline applies bloom, HDR, and tone mapping to produce cinematic glow effects
+- [x] **RNDR-03**: Each of the 11 cosmological eras has visually distinct shader programs with unique color palettes and particle behaviors
+- [x] **RNDR-04**: Era transitions crossfade smoothly between visual paradigms (no jarring cuts)
 - [ ] **RNDR-05**: Application supports fullscreen toggle and remembers window state
-- [ ] **RNDR-06**: Per-era shader architecture uses shared utility libraries with separate programs per era (not a mega-shader)
+- [x] **RNDR-06**: Per-era shader architecture uses shared utility libraries with separate programs per era (not a mega-shader)
 
 ### Camera
 
 - [x] **CAMR-01**: User can orbit, zoom, and pan the camera with smooth damping via mouse controls
-- [ ] **CAMR-02**: Cinematic auto-camera follows a scripted path through all 11 eras with smooth transitions
-- [ ] **CAMR-03**: User can pause auto-camera at any time and freely orbit/zoom, then resume cinematic mode
+- [x] **CAMR-02**: Cinematic auto-camera follows a scripted path through all 11 eras with smooth transitions
+- [x] **CAMR-03**: User can pause auto-camera at any time and freely orbit/zoom, then resume cinematic mode
 - [x] **CAMR-04**: Play/pause via spacebar, speed controls via +/- keys (0.5x to 10x range)
 
 ### Physics & Simulation
 
-- [ ] **PHYS-01**: Simulation covers all 11 cosmological eras: Planck epoch, Grand Unification, Inflation, Quark-Gluon Plasma, Hadron epoch, Nucleosynthesis, Recombination/CMB, Dark Ages, Reionization/First Stars, Galaxy Formation, Large-Scale Structure
-- [ ] **PHYS-02**: Each era uses real cosmological physics models — Friedmann equations for expansion, BBN yields for nucleosynthesis, Saha equation for recombination, Jeans instability for structure formation, Press-Schechter for halo statistics
+- [x] **PHYS-01**: Simulation covers all 11 cosmological eras: Planck epoch, Grand Unification, Inflation, Quark-Gluon Plasma, Hadron epoch, Nucleosynthesis, Recombination/CMB, Dark Ages, Reionization/First Stars, Galaxy Formation, Large-Scale Structure
+- [x] **PHYS-02**: Each era uses real cosmological physics models — Friedmann equations for expansion, BBN yields for nucleosynthesis, Saha equation for recombination, Jeans instability for structure formation, Press-Schechter for halo statistics
 - [x] **PHYS-03**: Logarithmic time mapping spans 60+ orders of magnitude (10^-43 seconds to 13.8 billion years) with intuitive visual timeline bar
-- [ ] **PHYS-04**: ~20 milestone markers trigger at correct cosmic timestamps ("First protons form", "Universe becomes transparent", "First stars ignite", etc.)
+- [x] **PHYS-04**: ~20 milestone markers trigger at correct cosmic timestamps ("First protons form", "Universe becomes transparent", "First stars ignite", etc.)
 - [x] **PHYS-05**: All physics constants sourced from Planck 2018 results and PDG values — centralized constants module with citations
 - [x] **PHYS-06**: Fixed-timestep simulation decoupled from render rate with interpolation for smooth display
 - [x] **PHYS-07**: Camera-relative rendering and era-specific coordinate systems to avoid floating-point precision breakdown at cosmic scales
 
 ### Educational HUD
 
-- [ ] **HUD-01**: Current era name displayed prominently with visual timeline bar showing position across all eras
-- [ ] **HUD-02**: Live physics readouts showing cosmic temperature, matter density, radiation density, and scale factor a(t)
-- [ ] **HUD-03**: Contextual educational explanations appear at key moments describing what is happening and why
-- [ ] **HUD-04**: HUD uses imgui-bundle for overlay rendering with clean, non-intrusive design following PhET minimal-text principles
-- [ ] **HUD-05**: HUD elements can be toggled on/off by the user
+- [x] **HUD-01**: Current era name displayed prominently with visual timeline bar showing position across all eras
+- [x] **HUD-02**: Live physics readouts showing cosmic temperature, matter density, radiation density, and scale factor a(t)
+- [x] **HUD-03**: Contextual educational explanations appear at key moments describing what is happening and why
+- [x] **HUD-04**: HUD uses imgui-bundle for overlay rendering with clean, non-intrusive design following PhET minimal-text principles
+- [x] **HUD-05**: HUD elements can be toggled on/off by the user
 
 ### Output & Capture
 
@@ -83,28 +83,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RNDR-01 | Phase 2 | Pending |
-| RNDR-02 | Phase 2 | Pending |
-| RNDR-03 | Phase 3 | Pending |
-| RNDR-04 | Phase 3 | Pending |
+| RNDR-01 | Phase 2 | Complete |
+| RNDR-02 | Phase 2 | Complete |
+| RNDR-03 | Phase 3 | Complete |
+| RNDR-04 | Phase 3 | Complete |
 | RNDR-05 | Phase 5 | Pending |
-| RNDR-06 | Phase 2 | Pending |
+| RNDR-06 | Phase 2 | Complete |
 | CAMR-01 | Phase 1 | Complete |
-| CAMR-02 | Phase 4 | Pending |
-| CAMR-03 | Phase 4 | Pending |
+| CAMR-02 | Phase 4 | Complete |
+| CAMR-03 | Phase 4 | Complete |
 | CAMR-04 | Phase 1 | Complete |
-| PHYS-01 | Phase 3 | Pending |
-| PHYS-02 | Phase 3 | Pending |
+| PHYS-01 | Phase 3 | Complete |
+| PHYS-02 | Phase 3 | Complete |
 | PHYS-03 | Phase 1 | Complete |
-| PHYS-04 | Phase 4 | Pending |
+| PHYS-04 | Phase 4 | Complete |
 | PHYS-05 | Phase 1 | Complete |
 | PHYS-06 | Phase 1 | Complete |
 | PHYS-07 | Phase 1 | Complete |
-| HUD-01 | Phase 4 | Pending |
-| HUD-02 | Phase 4 | Pending |
-| HUD-03 | Phase 4 | Pending |
-| HUD-04 | Phase 4 | Pending |
-| HUD-05 | Phase 4 | Pending |
+| HUD-01 | Phase 4 | Complete |
+| HUD-02 | Phase 4 | Complete |
+| HUD-03 | Phase 4 | Complete |
+| HUD-04 | Phase 4 | Complete |
+| HUD-05 | Phase 4 | Complete |
 | CAPT-01 | Phase 5 | Pending |
 | CAPT-02 | Phase 5 | Pending |
 | CAPT-03 | Phase 5 | Pending |

@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
+status: Phase complete — ready for verification
 stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-03-28T21:33:38Z"
+last_updated: "2026-03-28T21:35:03.693Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 12
-  completed_plans: 12
+  completed_plans: 11
 ---
 
 # Project State
@@ -55,7 +55,9 @@ Plan: 3 of 3
 | Phase 03 P02 | 4min | 2 tasks | 18 files |
 | Phase 03 P01 | 8min | 2 tasks | 9 files |
 | Phase 03 P03 | 7min | 2 tasks | 6 files |
-| Phase 04-presentation P03 | 5min | 2 tasks | 3 files |
+| Phase 04 P02 | 3min | 1 tasks | 3 files |
+| Phase 04-presentation P01 | 4min | 1 tasks | 4 files |
+| Phase 04 P03 | 5min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -90,6 +92,10 @@ Recent decisions affecting current work:
 - [Phase 03]: EraTransitionManager uses smoothstep blend curve for perceptually smooth crossfades
 - [Phase 03]: Physics lookup tables pre-computed at startup, not per-frame
 - [Phase 03]: Render loop split into _render_normal and _render_with_transition paths
+- [Phase 04]: Scalar catmull_rom function applied per-component for testability
+- [Phase 04]: Smoothstep blend-back for auto-camera resume, matching Phase 3 EraTransitionManager pattern
+- [Phase 04-presentation]: O(1) advancing index pointer for milestone triggering (sorted list + _next_index)
+- [Phase 04-presentation]: Milestone data sourced from Planck 2018/PDG/CODATA; notification lifecycle: display + fade with linear alpha
 - [Phase 04]: imgui HUD rendered after postfx.end_scene() to prevent bloom bleed into text
 - [Phase 04]: Timeline bar uses imgui foreground draw list for pixel-precise custom rendering
 - [Phase 04]: All 7 moderngl-window event types forwarded to imgui with want_capture guards
@@ -105,6 +111,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T21:33:38Z
+Last session: 2026-03-28T21:35:03.688Z
 Stopped at: Completed 04-03-PLAN.md
 Resume file: None

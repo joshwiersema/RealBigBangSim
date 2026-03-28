@@ -81,8 +81,8 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md -- Milestone event system (~20 cosmic milestones) and educational content data with MilestoneManager trigger/notification engine
-- [ ] 04-02-PLAN.md -- CinematicCameraController with Catmull-Rom spline interpolation, per-era keyframes, and auto/free mode toggle
+- [x] 04-01-PLAN.md -- Milestone event system (~20 cosmic milestones) and educational content data with MilestoneManager trigger/notification engine
+- [x] 04-02-PLAN.md -- CinematicCameraController with Catmull-Rom spline interpolation, per-era keyframes, and auto/free mode toggle
 - [ ] 04-03-PLAN.md -- imgui-bundle HUD overlay (era panel, physics readouts, education, notifications, timeline bar) and full app.py integration
 
 ### Phase 5: Capture & Polish

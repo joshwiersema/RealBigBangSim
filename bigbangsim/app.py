@@ -192,6 +192,10 @@ class BigBangSimApp(moderngl_window.WindowConfig):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        # Enable gl_PointSize in vertex shaders (required by AMD drivers,
+        # NVIDIA often enables this by default but the spec requires it)
+        self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)
+
         # Simulation engine
         self.sim = SimulationEngine()
 

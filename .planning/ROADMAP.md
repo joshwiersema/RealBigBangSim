@@ -61,11 +61,12 @@ Plans:
   2. Each era is visually distinct with unique color palettes and particle behaviors driven by its physics model (Friedmann equations, BBN yields, Saha equation, Jeans instability, Press-Schechter)
   3. Era transitions crossfade smoothly between visual paradigms with no jarring cuts or discontinuities
   4. A full timeline playthrough from singularity to large-scale structure completes without crashes or visual artifacts
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md -- Physics sub-modules (BBN yields, Saha equation, Jeans mass, Press-Schechter) and EraVisualConfig data structure
+- [ ] 03-02-PLAN.md -- All 11 per-era fragment shaders, upgraded compute shader, shared GLSL utilities, crossfade shader
+- [ ] 03-03-PLAN.md -- EraTransitionManager, expanded ParticleSystem (11 programs), app.py integration with physics uniforms
 
 ### Phase 4: Presentation
 **Goal**: Users receive a guided, educational experience with rich HUD overlays explaining the physics, a cinematic auto-camera that navigates the journey, and milestone markers at key cosmic moments
@@ -107,6 +108,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2026-03-28 |
 | 2. Core Rendering | 0/3 | Planning complete | - |
-| 3. Era Content | 0/0 | Not started | - |
+| 3. Era Content | 0/3 | Planning complete | - |
 | 4. Presentation | 0/0 | Not started | - |
 | 5. Capture & Polish | 0/0 | Not started | - |

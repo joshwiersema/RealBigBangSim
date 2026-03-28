@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-03-28T21:47:45.998Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-28T22:28:41.110Z"
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 12
-  completed_plans: 12
+  completed_phases: 5
+  total_plans: 14
+  completed_plans: 14
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** The simulation must be both scientifically accurate AND visually stunning -- real cosmological physics driving beautiful real-time 3D rendering that teaches as it mesmerizes.
-**Current focus:** Phase 04 — presentation
+**Current focus:** Phase 05 — capture-polish
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
+Phase: 05 (capture-polish) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -58,6 +58,8 @@ Plan: Not started
 | Phase 04 P02 | 3min | 1 tasks | 3 files |
 | Phase 04-presentation P01 | 4min | 1 tasks | 4 files |
 | Phase 04 P03 | 5min | 2 tasks | 3 files |
+| Phase 05 P01 | 4min | 2 tasks | 9 files |
+| Phase 05 P02 | 4min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -99,6 +101,11 @@ Recent decisions affecting current work:
 - [Phase 04]: imgui HUD rendered after postfx.end_scene() to prevent bloom bleed into text
 - [Phase 04]: Timeline bar uses imgui foreground draw list for pixel-precise custom rendering
 - [Phase 04]: All 7 moderngl-window event types forwarded to imgui with want_capture guards
+- [Phase 05]: Screenshot captured via deferred flag pattern (key sets flag, render end captures) for complete frame with HUD
+- [Phase 05]: Window position clamped to (0-4000, 0-3000) bounds to prevent off-screen windows after monitor changes
+- [Phase 05]: Pillow>=12 added as explicit pyproject.toml dependency (was transitive via imgui-bundle)
+- [Phase 05]: Frame-locked timing uses effective_frame_time override for all subsystems during recording
+- [Phase 05]: FFmpeg availability checked once at init; graceful error on F9 if missing
 
 ### Pending Todos
 
@@ -111,6 +118,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T21:35:03.688Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-03-28T22:28:41.105Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None

@@ -13,7 +13,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **RNDR-02**: Post-processing pipeline applies bloom, HDR, and tone mapping to produce cinematic glow effects
 - [x] **RNDR-03**: Each of the 11 cosmological eras has visually distinct shader programs with unique color palettes and particle behaviors
 - [x] **RNDR-04**: Era transitions crossfade smoothly between visual paradigms (no jarring cuts)
-- [ ] **RNDR-05**: Application supports fullscreen toggle and remembers window state
+- [x] **RNDR-05**: Application supports fullscreen toggle and remembers window state
 - [x] **RNDR-06**: Per-era shader architecture uses shared utility libraries with separate programs per era (not a mega-shader)
 
 ### Camera
@@ -43,9 +43,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Output & Capture
 
-- [ ] **CAPT-01**: User can capture high-resolution screenshots at any moment via keypress (PNG format)
-- [ ] **CAPT-02**: Full cinematic run can be recorded to MP4 via ffmpeg subprocess with frame-locked capture for consistent quality
-- [ ] **CAPT-03**: Video recording decoupled from real-time playback (frame-locked) so output quality is independent of GPU speed
+- [x] **CAPT-01**: User can capture high-resolution screenshots at any moment via keypress (PNG format)
+- [x] **CAPT-02**: Full cinematic run can be recorded to MP4 via ffmpeg subprocess with frame-locked capture for consistent quality
+- [x] **CAPT-03**: Video recording decoupled from real-time playback (frame-locked) so output quality is independent of GPU speed
 
 ## v2 Requirements
 
@@ -87,7 +87,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RNDR-02 | Phase 2 | Complete |
 | RNDR-03 | Phase 3 | Complete |
 | RNDR-04 | Phase 3 | Complete |
-| RNDR-05 | Phase 5 | Pending |
+| RNDR-05 | Phase 5 | Complete |
 | RNDR-06 | Phase 2 | Complete |
 | CAMR-01 | Phase 1 | Complete |
 | CAMR-02 | Phase 4 | Complete |
@@ -105,9 +105,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HUD-03 | Phase 4 | Complete |
 | HUD-04 | Phase 4 | Complete |
 | HUD-05 | Phase 4 | Complete |
-| CAPT-01 | Phase 5 | Pending |
-| CAPT-02 | Phase 5 | Pending |
-| CAPT-03 | Phase 5 | Pending |
+| CAPT-01 | Phase 5 | Complete |
+| CAPT-02 | Phase 5 | Complete |
+| CAPT-03 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 25 total

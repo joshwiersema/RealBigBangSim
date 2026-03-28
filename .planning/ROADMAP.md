@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Core Rendering** - GPU particle system with compute shaders, shader architecture, and post-processing pipeline
 - [ ] **Phase 3: Era Content** - All 11 cosmological eras with physics models, distinct visuals, and smooth transitions
 - [ ] **Phase 4: Presentation** - Educational HUD overlays, cinematic auto-camera, and milestone markers
-- [ ] **Phase 5: Capture & Polish** - Screenshot capture, video recording, fullscreen toggle, and final integration
+- [x] **Phase 5: Capture & Polish** - Screenshot capture, video recording, fullscreen toggle, and final integration (completed 2026-03-28)
 
 ## Phase Details
 
@@ -96,8 +96,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- Screenshot capture (PNG via Pillow), fullscreen toggle, and window state persistence (JSON in LOCALAPPDATA)
-- [ ] 05-02-PLAN.md -- Frame-locked video recording via FFmpeg subprocess pipe with HUD recording indicator
+- [x] 05-01-PLAN.md -- Screenshot capture (PNG via Pillow), fullscreen toggle, and window state persistence (JSON in LOCALAPPDATA)
+- [x] 05-02-PLAN.md -- Frame-locked video recording via FFmpeg subprocess pipe with HUD recording indicator
 
 ## Progress
 
@@ -110,4 +110,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Core Rendering | 0/3 | Planning complete | - |
 | 3. Era Content | 0/3 | Planning complete | - |
 | 4. Presentation | 0/3 | Planning complete | - |
-| 5. Capture & Polish | 0/2 | Planning complete | - |
+| 5. Capture & Polish | 2/2 | Complete   | 2026-03-28 |

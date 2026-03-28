@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to plan
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-03-28T04:48:05.196Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-03-28T20:06:20.861Z"
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  completed_phases: 2
+  total_plans: 6
+  completed_plans: 6
 ---
 
 # Project State
@@ -19,11 +19,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** The simulation must be both scientifically accurate AND visually stunning -- real cosmological physics driving beautiful real-time 3D rendering that teaches as it mesmerizes.
-**Current focus:** Phase 01 — foundation
+**Current focus:** Phase 02 — core-rendering
 
 ## Current Position
 
-Phase: 2
+Phase: 3
 Plan: Not started
 
 ## Performance Metrics
@@ -49,6 +49,9 @@ Plan: Not started
 | Phase 01-foundation P01 | 6min | 2 tasks | 14 files |
 | Phase 01 P02 | 10min | 2 tasks | 7 files |
 | Phase 01-foundation P03 | 6min | 3 tasks | 11 files |
+| Phase 02 P01 | 5min | 2 tasks | 13 files |
+| Phase 02 P02 | 5min | 2 tasks | 4 files |
+| Phase 02 P03 | 3min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -67,6 +70,14 @@ Recent decisions affecting current work:
 - [Phase 01-foundation]: Used bytes(matrix) for glm.mat4 to moderngl uniform upload
 - [Phase 01-foundation]: Corrected moderngl-window 3.1.1 callbacks: on_mouse_drag_event, on_mouse_scroll_event
 - [Phase 01-foundation]: keys.EQUAL for speed increase (keys.PLUS not in BaseKeys)
+- [Phase 02]: Single-level shader include resolution only (no recursion) for simplicity
+- [Phase 02]: Particle SSBO struct: 3x vec4 (position+life, velocity+type, color) for std430 alignment
+- [Phase 02]: Per-era fragment shader variants (hot/cool) instead of mega-shader branching (RNDR-06)
+- [Phase 02]: Mock-based testing strategy: all rendering tests use MagicMock for moderngl.Context, enabling CI without GPU
+- [Phase 02]: Empty VAO for gl_VertexID-based particle rendering (no vertex attributes, data from SSBO)
+- [Phase 02]: 6 blur iterations (3H + 3V) default for bloom, balancing quality vs performance
+- [Phase 02]: Additive blending (GL_ONE, GL_ONE) for particles -- emissive light sources, not opaque objects
+- [Phase 02]: Post-processing scene pass wraps particle render; timeline overlay after post-processing to avoid bloom bleed into UI
 
 ### Pending Todos
 
@@ -79,6 +90,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T04:39:34.033Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-03-28T20:00:16.582Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None

@@ -48,8 +48,8 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- Shader loader with include preprocessing, shared GLSL utility libraries, all GPU shader files (compute, vertex, fragment variants, post-processing)
-- [ ] 02-02-PLAN.md -- ParticleSystem class (ping-pong SSBOs, compute dispatch) and PostProcessingPipeline class (HDR FBO, bloom chain, tone mapping)
+- [x] 02-01-PLAN.md -- Shader loader with include preprocessing, shared GLSL utility libraries, all GPU shader files (compute, vertex, fragment variants, post-processing)
+- [x] 02-02-PLAN.md -- ParticleSystem class (ping-pong SSBOs, compute dispatch) and PostProcessingPipeline class (HDR FBO, bloom chain, tone mapping)
 - [ ] 02-03-PLAN.md -- App integration: wire particle system + post-processing into render loop, visual verification
 
 ### Phase 3: Era Content

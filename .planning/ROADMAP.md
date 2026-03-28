@@ -78,12 +78,12 @@ Plans:
   3. Contextual educational explanations appear at key moments describing what is happening and why
   4. Approximately 20 milestone markers trigger at correct cosmic timestamps with visible notifications
   5. Cinematic auto-camera follows scripted paths through all 11 eras, and user can pause it to freely orbit/zoom, then resume
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 3 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md -- Milestone event system (~20 cosmic milestones) and educational content data with MilestoneManager trigger/notification engine
+- [ ] 04-02-PLAN.md -- CinematicCameraController with Catmull-Rom spline interpolation, per-era keyframes, and auto/free mode toggle
+- [ ] 04-03-PLAN.md -- imgui-bundle HUD overlay (era panel, physics readouts, education, notifications, timeline bar) and full app.py integration
 
 ### Phase 5: Capture & Polish
 **Goal**: Users can capture and share the experience through high-resolution screenshots and full cinematic video recording, with final polish for a complete desktop application
@@ -109,5 +109,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. Foundation | 3/3 | Complete | 2026-03-28 |
 | 2. Core Rendering | 0/3 | Planning complete | - |
 | 3. Era Content | 0/3 | Planning complete | - |
-| 4. Presentation | 0/0 | Not started | - |
+| 4. Presentation | 0/3 | Planning complete | - |
 | 5. Capture & Polish | 0/0 | Not started | - |

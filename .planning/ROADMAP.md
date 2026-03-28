@@ -93,11 +93,11 @@ Plans:
   1. User can press a key to capture a high-resolution PNG screenshot at any moment during the simulation
   2. User can record a full cinematic run to MP4 via ffmpeg with consistent quality independent of GPU speed (frame-locked capture)
   3. Application supports fullscreen toggle and remembers window state between sessions
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md -- Screenshot capture (PNG via Pillow), fullscreen toggle, and window state persistence (JSON in LOCALAPPDATA)
+- [ ] 05-02-PLAN.md -- Frame-locked video recording via FFmpeg subprocess pipe with HUD recording indicator
 
 ## Progress
 
@@ -110,4 +110,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Core Rendering | 0/3 | Planning complete | - |
 | 3. Era Content | 0/3 | Planning complete | - |
 | 4. Presentation | 0/3 | Planning complete | - |
-| 5. Capture & Polish | 0/0 | Not started | - |
+| 5. Capture & Polish | 0/2 | Planning complete | - |

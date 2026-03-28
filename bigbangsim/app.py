@@ -25,7 +25,14 @@ import numpy as np
 from imgui_bundle import imgui
 from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
 
-from bigbangsim.config import WINDOW_WIDTH, WINDOW_HEIGHT, PHYSICS_DT
+from bigbangsim.config import (
+    WINDOW_WIDTH,
+    WINDOW_HEIGHT,
+    PHYSICS_DT,
+    save_window_state,
+    load_window_state,
+)
+from bigbangsim.capture.screenshot import take_screenshot
 from bigbangsim.simulation.engine import SimulationEngine
 from bigbangsim.simulation.eras import ERAS
 from bigbangsim.simulation.era_visual_config import (
@@ -101,6 +108,21 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         self.hud = HUDManager()
         self.milestones = MilestoneManager(MILESTONES)
         self.camera_controller = CinematicCameraController(self.camera)
+
+        # --- Phase 5: Capture & Polish ---
+        self._screenshot_requested = False
+
+        # Restore saved window state (RNDR-05)
+        saved_state = load_window_state()
+        if saved_state:
+            if saved_state.get("fullscreen"):
+                self.wnd.fullscreen = True
+            elif "position" in saved_state and "size" in saved_state:
+                try:
+                    self.wnd.position = tuple(saved_state["position"])
+                    self.wnd.size = tuple(saved_state["size"])
+                except Exception:
+                    pass  # Ignore if backend doesn't support position/size set
 
     def _compute_physics_uniforms(self, state) -> dict[str, float]:
         """Compute era-specific physics uniforms from simulation state.
@@ -276,6 +298,12 @@ class BigBangSimApp(moderngl_window.WindowConfig):
             f"{fps:.0f} FPS | {speed_str}{pause_str} | Cam: {cam_str}"
         )
 
+        # Phase 5: Screenshot capture (after HUD rendering, before swap)
+        if self._screenshot_requested:
+            self._screenshot_requested = False
+            path = take_screenshot(self.ctx.fbo, self.wnd.size[0], self.wnd.size[1])
+            print(f"Screenshot saved: {path}")
+
     def _render_hud(self, state):
         """Render imgui HUD overlay after post-processing."""
         imgui.new_frame()
@@ -405,6 +433,10 @@ class BigBangSimApp(moderngl_window.WindowConfig):
                 self.hud.toggle()
             elif key == keys.C:
                 self.camera_controller.toggle_mode()
+            elif key == keys.F12:
+                self._screenshot_requested = True
+            elif key == keys.F11:
+                self.wnd.fullscreen = not self.wnd.fullscreen
             elif key == keys.ESCAPE:
                 self.wnd.close()
 
@@ -444,3 +476,7 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         self.postfx.resize(width, height)
         self.transition.resize(width, height)
         self.imgui_renderer.resize(width, height)
+
+    def on_close(self):
+        """Save window state on application close (RNDR-05)."""
+        save_window_state(self.wnd)

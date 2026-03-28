@@ -316,14 +316,14 @@ class HUDManager:
 
     def _render_controls_hint(self, camera_auto, display_size) -> None:
         """Bottom-right corner: keyboard controls hint."""
-        imgui.set_next_window_pos(imgui.ImVec2(display_size.x - 220, display_size.y - 70))
+        imgui.set_next_window_pos(imgui.ImVec2(display_size.x - 280, display_size.y - 70))
         imgui.set_next_window_bg_alpha(0.4)
         imgui.begin("Controls", None, HUD_FLAGS)
 
         cam_mode = "Auto" if camera_auto else "Free"
         imgui.push_style_color(imgui.Col_.text, imgui.ImVec4(0.7, 0.7, 0.7, 1.0))
-        imgui.text(f"H: Toggle HUD | C: Camera [{cam_mode}]")
-        imgui.text("Space: Pause | +/-: Speed")
+        imgui.text(f"H: HUD | C: Cam [{cam_mode}] | F12: Screenshot")
+        imgui.text("Space: Pause | +/-: Speed | F11: Fullscreen")
         imgui.pop_style_color()
 
         imgui.end()

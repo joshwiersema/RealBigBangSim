@@ -23,6 +23,20 @@ import glm
 import numpy as np
 
 from imgui_bundle import imgui
+
+# ---------------------------------------------------------------------------
+# imgui-bundle 1.92+ removed ImFontAtlas.get_tex_data_as_rgba32() which
+# moderngl-window 3.1.1 still calls.  Patch it back using the new tex_list
+# API so the integration module can initialise its font texture.
+# ---------------------------------------------------------------------------
+_fa = imgui.ImFontAtlas
+if not hasattr(_fa, "get_tex_data_as_rgba32"):
+    def _get_tex_data_as_rgba32(self):
+        tex = self.tex_list[0]
+        arr = tex.get_pixels_array()
+        return arr.reshape((tex.height, tex.width, tex.bytes_per_pixel))
+    _fa.get_tex_data_as_rgba32 = _get_tex_data_as_rgba32
+
 from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
 
 from bigbangsim.config import (

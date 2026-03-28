@@ -2,6 +2,7 @@
 layout(local_size_x = 256) in;
 
 #include "common.glsl"
+#include "noise.glsl"
 
 layout(std430, binding = 0) readonly buffer ParticlesIn {
     Particle particles_in[];
@@ -19,12 +20,27 @@ void main() {
     vec3 vel = p.velocity.xyz;
     float life = p.position.w;
 
-    // Hubble-like expansion flow: velocity proportional to distance
-    float expansion_rate = u_scale_factor * 0.01;
-    vel += pos * expansion_rate * u_dt;
+    // Per-era expansion (Hubble-like flow)
+    vel += pos * u_expansion_rate * u_dt;
 
-    // Damping to prevent runaway
-    vel *= (1.0 - 0.01 * u_dt);
+    // Per-era turbulence via 3D simplex noise
+    if (u_noise_strength > 0.001) {
+        vec3 noise_sample = vec3(
+            snoise3(pos * 0.5 + vec3(u_era_progress * 1.5, 0.0, 0.0)),
+            snoise3(pos * 0.5 + vec3(0.0, u_era_progress * 1.5, 0.0)),
+            snoise3(pos * 0.5 + vec3(0.0, 0.0, u_era_progress * 1.5))
+        );
+        vel += noise_sample * u_noise_strength * u_dt;
+    }
+
+    // Per-era gravitational clustering (late eras)
+    if (u_gravity_strength > 0.001) {
+        float r = max(length(pos), 0.1);
+        vel += -normalize(pos) * u_gravity_strength * u_dt / r;
+    }
+
+    // Per-era damping
+    vel *= (1.0 - u_damping * u_dt);
 
     // Integrate position
     pos += vel * u_dt;
@@ -34,5 +50,5 @@ void main() {
 
     particles_out[idx].position = vec4(pos, life);
     particles_out[idx].velocity = vec4(vel, p.velocity.w);
-    particles_out[idx].color = p.color;  // Color updated by fragment shader, not compute
+    particles_out[idx].color = p.color;
 }

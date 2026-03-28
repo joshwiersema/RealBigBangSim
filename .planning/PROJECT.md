@@ -12,7 +12,11 @@ The simulation must be both scientifically accurate AND visually stunning — re
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ Manual camera override (orbit, zoom, pan) — Phase 1
+- ✓ Scientifically accurate cosmological constants (Planck 2018/PDG) — Phase 1
+- ✓ Logarithmic timeline spanning full cosmic history (10^-43 s to 13.8 Gyr) — Phase 1
+- ✓ Fixed-timestep simulation with Friedmann equation integration — Phase 1
+- ✓ Camera-relative rendering for float precision at cosmic scales — Phase 1
 
 ### Active
 
@@ -21,7 +25,6 @@ The simulation must be both scientifically accurate AND visually stunning — re
 - [ ] GPU-accelerated particle system (100K-1M particles)
 - [ ] Scientifically accurate physics for each cosmological era
 - [ ] Cinematic auto-camera with smooth era transitions
-- [ ] Manual camera override (orbit, zoom, pan) when paused
 - [ ] Rich educational HUD (era labels, physics explanations, temperature/density readouts, milestone markers)
 - [ ] Generative ambient soundscape evolving per era
 - [ ] Screenshot capture (high-res, any moment)
@@ -80,4 +83,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-27 after initialization*
+*Last updated: 2026-03-28 after Phase 1 completion*

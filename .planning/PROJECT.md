@@ -23,6 +23,9 @@ The simulation must be both scientifically accurate AND visually stunning — re
 - ✓ All 11 cosmological eras with distinct visuals and physics models — Phase 3
 - ✓ Smooth FBO-based crossfade transitions between eras — Phase 3
 - ✓ Scientifically accurate physics (BBN, Saha, Jeans, Press-Schechter) — Phase 3
+- ✓ imgui-bundle HUD with era labels, physics readouts, educational content — Phase 4
+- ✓ ~20 milestone markers at correct cosmic timestamps — Phase 4
+- ✓ Cinematic auto-camera with Catmull-Rom splines and free orbit toggle — Phase 4
 
 ### Active
 
@@ -86,4 +89,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-28 after Phase 3 completion*
+*Last updated: 2026-03-28 after Phase 4 completion*

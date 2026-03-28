@@ -400,8 +400,10 @@ class BigBangSimApp(moderngl_window.WindowConfig):
             self.camera.position_dvec3,
             self.camera.target_dvec3,
         )
-        proj_bytes = bytes(proj)
-        view_bytes = bytes(view)
+        # bytes(glm.mat4) gives ROW-MAJOR data, but OpenGL expects COLUMN-MAJOR.
+        # Use numpy Fortran-order (column-major) serialization instead.
+        proj_bytes = np.array(proj, dtype='f4').tobytes(order='F')
+        view_bytes = np.array(view, dtype='f4').tobytes(order='F')
 
         # 12. Compute physics uniforms for the current era
         physics_uniforms = self._compute_physics_uniforms(state)

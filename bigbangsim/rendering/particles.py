@@ -237,8 +237,8 @@ class ParticleSystem:
         """Render all particles using the active shader program.
 
         Args:
-            projection: Projection matrix as bytes (from bytes(glm.mat4)).
-            view: View matrix as bytes (from bytes(glm.mat4)).
+            projection: Projection matrix as column-major bytes (64 bytes).
+            view: View matrix as column-major bytes (64 bytes).
         """
         prog = self.get_active_program()
 
@@ -269,8 +269,8 @@ class ParticleSystem:
 
         Args:
             shader_key: Key into self.programs (e.g., "era_03_qgp").
-            projection: Projection matrix as bytes.
-            view: View matrix as bytes.
+            projection: Projection matrix as column-major bytes (64 bytes).
+            view: View matrix as column-major bytes (64 bytes).
         """
         prog = self.programs.get(shader_key)
         if prog is None:

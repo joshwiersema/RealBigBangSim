@@ -33,8 +33,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Project scaffolding, cosmological constants module (Planck 2018/PDG), PhysicsState dataclass
-- [ ] 01-02-PLAN.md -- Piecewise logarithmic timeline controller, Friedmann cosmology solver, fixed-timestep simulation engine
+- [x] 01-01-PLAN.md -- Project scaffolding, cosmological constants module (Planck 2018/PDG), PhysicsState dataclass
+- [x] 01-02-PLAN.md -- Piecewise logarithmic timeline controller, Friedmann cosmology solver, fixed-timestep simulation engine
 - [ ] 01-03-PLAN.md -- OpenGL window, damped orbit camera, play/pause/speed controls, timeline bar, test scene
 
 ### Phase 2: Core Rendering

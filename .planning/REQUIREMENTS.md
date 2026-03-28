@@ -18,20 +18,20 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Camera
 
-- [ ] **CAMR-01**: User can orbit, zoom, and pan the camera with smooth damping via mouse controls
+- [x] **CAMR-01**: User can orbit, zoom, and pan the camera with smooth damping via mouse controls
 - [ ] **CAMR-02**: Cinematic auto-camera follows a scripted path through all 11 eras with smooth transitions
 - [ ] **CAMR-03**: User can pause auto-camera at any time and freely orbit/zoom, then resume cinematic mode
-- [ ] **CAMR-04**: Play/pause via spacebar, speed controls via +/- keys (0.5x to 10x range)
+- [x] **CAMR-04**: Play/pause via spacebar, speed controls via +/- keys (0.5x to 10x range)
 
 ### Physics & Simulation
 
 - [ ] **PHYS-01**: Simulation covers all 11 cosmological eras: Planck epoch, Grand Unification, Inflation, Quark-Gluon Plasma, Hadron epoch, Nucleosynthesis, Recombination/CMB, Dark Ages, Reionization/First Stars, Galaxy Formation, Large-Scale Structure
 - [ ] **PHYS-02**: Each era uses real cosmological physics models — Friedmann equations for expansion, BBN yields for nucleosynthesis, Saha equation for recombination, Jeans instability for structure formation, Press-Schechter for halo statistics
-- [ ] **PHYS-03**: Logarithmic time mapping spans 60+ orders of magnitude (10^-43 seconds to 13.8 billion years) with intuitive visual timeline bar
+- [x] **PHYS-03**: Logarithmic time mapping spans 60+ orders of magnitude (10^-43 seconds to 13.8 billion years) with intuitive visual timeline bar
 - [ ] **PHYS-04**: ~20 milestone markers trigger at correct cosmic timestamps ("First protons form", "Universe becomes transparent", "First stars ignite", etc.)
-- [ ] **PHYS-05**: All physics constants sourced from Planck 2018 results and PDG values — centralized constants module with citations
-- [ ] **PHYS-06**: Fixed-timestep simulation decoupled from render rate with interpolation for smooth display
-- [ ] **PHYS-07**: Camera-relative rendering and era-specific coordinate systems to avoid floating-point precision breakdown at cosmic scales
+- [x] **PHYS-05**: All physics constants sourced from Planck 2018 results and PDG values — centralized constants module with citations
+- [x] **PHYS-06**: Fixed-timestep simulation decoupled from render rate with interpolation for smooth display
+- [x] **PHYS-07**: Camera-relative rendering and era-specific coordinate systems to avoid floating-point precision breakdown at cosmic scales
 
 ### Educational HUD
 
@@ -89,17 +89,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RNDR-04 | Phase 3 | Pending |
 | RNDR-05 | Phase 5 | Pending |
 | RNDR-06 | Phase 2 | Pending |
-| CAMR-01 | Phase 1 | Pending |
+| CAMR-01 | Phase 1 | Complete |
 | CAMR-02 | Phase 4 | Pending |
 | CAMR-03 | Phase 4 | Pending |
-| CAMR-04 | Phase 1 | Pending |
+| CAMR-04 | Phase 1 | Complete |
 | PHYS-01 | Phase 3 | Pending |
 | PHYS-02 | Phase 3 | Pending |
-| PHYS-03 | Phase 1 | Pending |
+| PHYS-03 | Phase 1 | Complete |
 | PHYS-04 | Phase 4 | Pending |
-| PHYS-05 | Phase 1 | Pending |
-| PHYS-06 | Phase 1 | Pending |
-| PHYS-07 | Phase 1 | Pending |
+| PHYS-05 | Phase 1 | Complete |
+| PHYS-06 | Phase 1 | Complete |
+| PHYS-07 | Phase 1 | Complete |
 | HUD-01 | Phase 4 | Pending |
 | HUD-02 | Phase 4 | Pending |
 | HUD-03 | Phase 4 | Pending |

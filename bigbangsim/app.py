@@ -25,22 +25,59 @@ import numpy as np
 from imgui_bundle import imgui
 
 # ---------------------------------------------------------------------------
-# imgui-bundle 1.92+ removed ImFontAtlas.get_tex_data_as_rgba32() which
-# moderngl-window 3.1.1 still calls.  Patch it back using the new tex_list
-# API so the integration module can initialise its font texture.
+# imgui-bundle 1.92+ broke the API that moderngl-window 3.1.1 expects:
+#   - ImFontAtlas.get_tex_data_as_rgba32() removed
+#   - ImFontAtlas.tex_id removed (now per-texture in tex_list)
+# Subclass the renderer to fix both methods using the new API.
 # ---------------------------------------------------------------------------
-_fa = imgui.ImFontAtlas
-if not hasattr(_fa, "get_tex_data_as_rgba32"):
-    def _get_tex_data_as_rgba32(self):
-        if len(self.tex_list) == 0:
-            if len(self.fonts) == 0:
-                self.add_font_default()
-        tex = self.tex_list[0]
-        arr = tex.get_pixels_array()
-        return arr.reshape((tex.height, tex.width, tex.bytes_per_pixel))
-    _fa.get_tex_data_as_rgba32 = _get_tex_data_as_rgba32
+from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer as _Base
 
-from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
+_NEEDS_COMPAT = not hasattr(imgui.ImFontAtlas, "get_tex_data_as_rgba32")
+
+
+class _CompatRenderer(_Base):
+    """Compatibility wrapper for imgui-bundle 1.92+ with moderngl-window 3.1.1."""
+
+    def refresh_font_texture(self):
+        fonts = self.io.fonts
+        # Ensure the atlas has at least one font (old API did this implicitly)
+        if len(fonts.tex_list) == 0:
+            if len(fonts.fonts) == 0:
+                fonts.add_font_default()
+        tex = fonts.tex_list[0]
+        pixels = tex.get_pixels_array()
+        width, height = tex.width, tex.height
+
+        if self._font_texture:
+            self.remove_texture(self._font_texture)
+            self._font_texture.release()
+
+        self._font_texture = self.ctx.texture(
+            (width, height), 4, data=pixels,
+        )
+        self.register_texture(self._font_texture)
+        tex.set_tex_id(self._font_texture.glo)
+        fonts.clear_tex_data()
+
+    def _invalidate_device_objects(self):
+        if self._font_texture:
+            self._font_texture.release()
+        if self._vertex_buffer:
+            self._vertex_buffer.release()
+        if self._index_buffer:
+            self._index_buffer.release()
+        if self._vao:
+            self._vao.release()
+        if self._prog:
+            self._prog.release()
+
+        fonts = self.io.fonts
+        if len(fonts.tex_list) > 0:
+            fonts.tex_list[0].set_tex_id(0)
+        self._font_texture = None
+
+
+ModernglWindowRenderer = _CompatRenderer if _NEEDS_COMPAT else _Base
 
 from bigbangsim.config import (
     WINDOW_WIDTH,

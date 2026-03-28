@@ -9,6 +9,7 @@ dependencies = [
     "PyGLM==2.8.3",
     "numpy>=2.2,<3",
     "scipy>=1.14,<2",
+    "Pillow>=12",
 ]
 
 [project.optional-dependencies]

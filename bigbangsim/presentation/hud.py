@@ -23,12 +23,12 @@ _HAS_FONT_SCALE = hasattr(imgui, "set_window_font_scale")
 
 
 def _push_scaled_font(scale: float) -> None:
-    """Temporarily switch to a font baked at *scale* x default size."""
+    """Temporarily switch to a font rendered at *scale* x default size."""
     if _HAS_FONT_SCALE:
         imgui.set_window_font_scale(scale)
     else:
         base = imgui.get_font().legacy_size or 13.0
-        imgui.push_font(imgui.get_font().get_font_baked(base * scale))
+        imgui.push_font(imgui.get_font(), base * scale)
 
 
 def _pop_scaled_font() -> None:

@@ -8,6 +8,12 @@ uniform uint u_particle_count;
 uniform int u_era;
 uniform float u_era_progress;
 
+// Per-era behavior uniforms (set from EraVisualConfig)
+uniform float u_expansion_rate;
+uniform float u_noise_strength;
+uniform float u_gravity_strength;
+uniform float u_damping;
+
 // Particle struct matching SSBO layout (all vec4 for std430 alignment safety)
 struct Particle {
     vec4 position;  // xyz = position, w = life (0.0-1.0)

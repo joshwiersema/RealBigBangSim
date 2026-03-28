@@ -17,6 +17,26 @@ from bigbangsim.presentation.educational_content import ERA_DESCRIPTIONS
 from bigbangsim.presentation.milestones import MilestoneManager
 from bigbangsim.simulation.eras import EraDefinition
 
+# imgui-bundle 1.92+ removed set_window_font_scale(). Use push_font with
+# baked fonts at the desired pixel size instead.
+_HAS_FONT_SCALE = hasattr(imgui, "set_window_font_scale")
+
+
+def _push_scaled_font(scale: float) -> None:
+    """Temporarily switch to a font baked at *scale* x default size."""
+    if _HAS_FONT_SCALE:
+        imgui.set_window_font_scale(scale)
+    else:
+        base = imgui.get_font().legacy_size or 13.0
+        imgui.push_font(imgui.get_font().get_font_baked(base * scale))
+
+
+def _pop_scaled_font() -> None:
+    if _HAS_FONT_SCALE:
+        imgui.set_window_font_scale(1.0)
+    else:
+        imgui.pop_font()
+
 
 # ---------------------------------------------------------------------------
 # imgui window flags for all HUD panels: no title bar, no resize, no move,
@@ -183,9 +203,9 @@ class HUDManager:
 
         if era is not None:
             imgui.push_style_color(imgui.Col_.text, imgui.ImVec4(1.0, 0.9, 0.7, 1.0))
-            imgui.set_window_font_scale(1.5)
+            _push_scaled_font(1.5)
             imgui.text(era.name)
-            imgui.set_window_font_scale(1.0)
+            _pop_scaled_font()
             imgui.pop_style_color()
             imgui.text(era.description)
 
@@ -247,9 +267,9 @@ class HUDManager:
                 imgui.Col_.text,
                 imgui.ImVec4(1.0, 0.85, 0.4, alpha),
             )
-            imgui.set_window_font_scale(1.3)
+            _push_scaled_font(1.3)
             imgui.text(notif.milestone.name)
-            imgui.set_window_font_scale(1.0)
+            _pop_scaled_font()
             imgui.pop_style_color()
 
             imgui.push_style_color(

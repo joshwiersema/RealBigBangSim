@@ -30,17 +30,28 @@ from imgui_bundle import imgui
 #   - ImFontAtlas.tex_id removed (now per-texture in tex_list)
 # Subclass the renderer to fix both methods using the new API.
 # ---------------------------------------------------------------------------
+import ctypes
 from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer as _Base
 
 _NEEDS_COMPAT = not hasattr(imgui.ImFontAtlas, "get_tex_data_as_rgba32")
 
 
 class _CompatRenderer(_Base):
-    """Compatibility wrapper for imgui-bundle 1.92+ with moderngl-window 3.1.1."""
+    """Compatibility wrapper for imgui-bundle 1.92+ with moderngl-window 3.1.1.
+
+    imgui-bundle 1.92+ changed several APIs that moderngl-window 3.1.1 uses:
+      - ImFontAtlas.get_tex_data_as_rgba32() removed (now tex_list API)
+      - ImFontAtlas.tex_id removed (now per-texture set_tex_id/get_tex_id)
+      - ImDrawCmd.texture_id removed (now get_tex_id())
+      - Backends must set renderer_has_textures flag
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.io.backend_flags |= imgui.BackendFlags_.renderer_has_textures
 
     def refresh_font_texture(self):
         fonts = self.io.fonts
-        # Ensure the atlas has at least one font (old API did this implicitly)
         if len(fonts.tex_list) == 0:
             if len(fonts.fonts) == 0:
                 fonts.add_font_default()
@@ -57,7 +68,61 @@ class _CompatRenderer(_Base):
         )
         self.register_texture(self._font_texture)
         tex.set_tex_id(self._font_texture.glo)
-        fonts.clear_tex_data()
+        tex.set_status(imgui.ImTextureStatus.ok)
+
+    def render(self, draw_data: imgui.ImDrawData):
+        io = self.io
+        display_width, display_height = io.display_size
+        fb_width = int(display_width * io.display_framebuffer_scale[0])
+        fb_height = int(display_height * io.display_framebuffer_scale[1])
+
+        if fb_width == 0 or fb_height == 0:
+            return
+
+        self.projMat.value = (
+            2.0 / display_width, 0.0, 0.0, 0.0,
+            0.0, 2.0 / -display_height, 0.0, 0.0,
+            0.0, 0.0, -1.0, 0.0,
+            -1.0, 1.0, 0.0, 1.0,
+        )
+
+        draw_data.scale_clip_rects(imgui.ImVec2(*io.display_framebuffer_scale))
+
+        self.ctx.enable_only(moderngl.BLEND)
+        self.ctx.blend_equation = moderngl.FUNC_ADD
+        self.ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
+
+        self._font_texture.use()
+
+        for commands in draw_data.cmd_lists:
+            vtx_type = ctypes.c_byte * commands.vtx_buffer.size() * imgui.VERTEX_SIZE
+            idx_type = ctypes.c_byte * commands.idx_buffer.size() * imgui.INDEX_SIZE
+            vtx_arr = (vtx_type).from_address(commands.vtx_buffer.data_address())
+            idx_arr = (idx_type).from_address(commands.idx_buffer.data_address())
+            self._vertex_buffer.write(vtx_arr)
+            self._index_buffer.write(idx_arr)
+
+            idx_pos = 0
+            for command in commands.cmd_buffer:
+                # imgui-bundle 1.92+: texture_id -> get_tex_id()
+                tex_id = command.get_tex_id()
+                texture = self._textures.get(tex_id)
+                if texture is None:
+                    raise ValueError(
+                        f"Texture {tex_id} is not registered. "
+                        f"Current textures: {list(self._textures)}"
+                    )
+
+                texture.use(0)
+
+                x, y, z, w = command.clip_rect
+                self.ctx.scissor = int(x), int(fb_height - w), int(z - x), int(w - y)
+                self._vao.render(
+                    moderngl.TRIANGLES, vertices=command.elem_count, first=idx_pos,
+                )
+                idx_pos += command.elem_count
+
+        self.ctx.scissor = None
 
     def _invalidate_device_objects(self):
         if self._font_texture:

@@ -30,11 +30,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can press spacebar to play/pause and +/- to change simulation speed (0.5x-10x)
   4. A visual timeline bar shows the current cosmic time position across 60+ orders of magnitude with per-era time budgets
   5. All cosmological constants are sourced from Planck 2018 / PDG values with citation comments in a centralized module
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md -- Project scaffolding, cosmological constants module (Planck 2018/PDG), PhysicsState dataclass
+- [ ] 01-02-PLAN.md -- Piecewise logarithmic timeline controller, Friedmann cosmology solver, fixed-timestep simulation engine
+- [ ] 01-03-PLAN.md -- OpenGL window, damped orbit camera, play/pause/speed controls, timeline bar, test scene
 
 ### Phase 2: Core Rendering
 **Goal**: The simulation renders 100K+ particles in real-time via GPU compute shaders with cinematic post-processing effects, proving the rendering architecture before era content is added
@@ -103,7 +104,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/0 | Not started | - |
+| 1. Foundation | 0/3 | Planning complete | - |
 | 2. Core Rendering | 0/0 | Not started | - |
 | 3. Era Content | 0/0 | Not started | - |
 | 4. Presentation | 0/0 | Not started | - |

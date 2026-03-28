@@ -45,11 +45,12 @@ Plans:
   1. Application renders 100K-1M particles at 30+ FPS on a GTX 1060-class GPU using compute shader updates
   2. Bloom, HDR, and tone mapping produce visible cinematic glow effects on the particle scene
   3. Shader architecture uses shared utility libraries with separate per-era shader programs (not a mega-shader), verified by at least 2 distinct shader variants loading successfully
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md -- Shader loader with include preprocessing, shared GLSL utility libraries, all GPU shader files (compute, vertex, fragment variants, post-processing)
+- [ ] 02-02-PLAN.md -- ParticleSystem class (ping-pong SSBOs, compute dispatch) and PostProcessingPipeline class (HDR FBO, bloom chain, tone mapping)
+- [ ] 02-03-PLAN.md -- App integration: wire particle system + post-processing into render loop, visual verification
 
 ### Phase 3: Era Content
 **Goal**: Users experience a complete journey through all 11 cosmological eras, each with scientifically accurate physics and visually distinct rendering, connected by smooth transitions
@@ -104,8 +105,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/3 | Planning complete | - |
-| 2. Core Rendering | 0/0 | Not started | - |
+| 1. Foundation | 3/3 | Complete | 2026-03-28 |
+| 2. Core Rendering | 0/3 | Planning complete | - |
 | 3. Era Content | 0/0 | Not started | - |
 | 4. Presentation | 0/0 | Not started | - |
 | 5. Capture & Polish | 0/0 | Not started | - |

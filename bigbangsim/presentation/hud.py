@@ -135,6 +135,7 @@ class HUDManager:
         milestones: MilestoneManager,
         camera_auto: bool,
         eras: list[EraDefinition],
+        recording: bool = False,
     ) -> None:
         """Render all HUD panels for the current frame.
 
@@ -147,6 +148,7 @@ class HUDManager:
             milestones: MilestoneManager with active notifications.
             camera_auto: Whether the cinematic camera is in auto mode.
             eras: List of EraDefinition objects (the 11 eras).
+            recording: Whether video recording is active.
         """
         if not self.visible:
             return
@@ -165,7 +167,7 @@ class HUDManager:
             self._render_milestone_notifications(milestones, display_size)
 
         self._render_timeline_bar(state, sim, eras, display_size)
-        self._render_controls_hint(camera_auto, display_size)
+        self._render_controls_hint(camera_auto, recording, display_size)
 
     # ------------------------------------------------------------------
     # Panel methods
@@ -314,16 +316,21 @@ class HUDManager:
             2.0,
         )
 
-    def _render_controls_hint(self, camera_auto, display_size) -> None:
+    def _render_controls_hint(self, camera_auto, recording, display_size) -> None:
         """Bottom-right corner: keyboard controls hint."""
-        imgui.set_next_window_pos(imgui.ImVec2(display_size.x - 280, display_size.y - 70))
+        imgui.set_next_window_pos(imgui.ImVec2(display_size.x - 310, display_size.y - 85))
         imgui.set_next_window_bg_alpha(0.4)
         imgui.begin("Controls", None, HUD_FLAGS)
 
         cam_mode = "Auto" if camera_auto else "Free"
+        rec_status = " [REC]" if recording else ""
         imgui.push_style_color(imgui.Col_.text, imgui.ImVec4(0.7, 0.7, 0.7, 1.0))
         imgui.text(f"H: HUD | C: Cam [{cam_mode}] | F12: Screenshot")
-        imgui.text("Space: Pause | +/-: Speed | F11: Fullscreen")
+        imgui.text(f"Space: Pause | +/-: Speed | F11: Fullscreen")
+        imgui.pop_style_color()
+        rec_color = imgui.ImVec4(1.0, 0.3, 0.3, 1.0) if recording else imgui.ImVec4(0.7, 0.7, 0.7, 1.0)
+        imgui.push_style_color(imgui.Col_.text, rec_color)
+        imgui.text(f"F9: Record{rec_status}")
         imgui.pop_style_color()
 
         imgui.end()

@@ -33,6 +33,7 @@ from bigbangsim.config import (
     load_window_state,
 )
 from bigbangsim.capture.screenshot import take_screenshot
+from bigbangsim.capture.recorder import VideoRecorder
 from bigbangsim.simulation.engine import SimulationEngine
 from bigbangsim.simulation.eras import ERAS
 from bigbangsim.simulation.era_visual_config import (
@@ -111,6 +112,10 @@ class BigBangSimApp(moderngl_window.WindowConfig):
 
         # --- Phase 5: Capture & Polish ---
         self._screenshot_requested = False
+
+        # Video recorder (CAPT-02, CAPT-03) -- None until recording starts
+        self.recorder: VideoRecorder | None = None
+        self._ffmpeg_available = VideoRecorder.is_available()
 
         # Restore saved window state (RNDR-05)
         saved_state = load_window_state()
@@ -228,17 +233,22 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         PHYS-07: View matrix is computed via view_matrix_camera_relative()
         using double-precision camera position/target.
         """
-        # 1. Update simulation
-        state, alpha = self.sim.update(frame_time)
+        # 1. Update simulation (frame-locked during recording -- CAPT-03)
+        effective_frame_time = frame_time
+        if self.recorder and self.recorder.recording:
+            override = self.recorder.frame_time_override
+            if override is not None:
+                effective_frame_time = override
+        state, alpha = self.sim.update(effective_frame_time)
 
         # 2. Update milestones
-        self.milestones.update(state.cosmic_time, frame_time)
+        self.milestones.update(state.cosmic_time, effective_frame_time)
 
         # 3. Update camera damping
-        self.camera.update(frame_time)
+        self.camera.update(effective_frame_time)
 
         # 4. Update cinematic camera controller
-        self.camera_controller.update(frame_time, state.current_era, state.era_progress)
+        self.camera_controller.update(effective_frame_time, state.current_era, state.era_progress)
 
         # 5. Look up current era's visual config
         config = get_era_visual_config(state.current_era)
@@ -286,16 +296,17 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         # 14. HUD overlay (rendered AFTER post-processing, directly to default framebuffer)
         self._render_hud(state)
 
-        # Window title with FPS, particle count, and camera mode
+        # Window title with FPS, particle count, camera mode, and recording status
         era_name = ERAS[state.current_era].name if 0 <= state.current_era < len(ERAS) else "?"
         speed_str = f"{self.sim.speed_multiplier:.1f}x"
         pause_str = " [PAUSED]" if self.sim.paused else ""
         fps = 1.0 / frame_time if frame_time > 0 else 0.0
         cam_str = "Auto" if self.camera_controller.is_auto else "Free"
+        rec_str = " | REC" if (self.recorder and self.recorder.recording) else ""
         self.wnd.title = (
             f"BigBangSim - {era_name} | T={state.temperature:.1f}K | "
             f"{self.particles.count // 1000}K particles | "
-            f"{fps:.0f} FPS | {speed_str}{pause_str} | Cam: {cam_str}"
+            f"{fps:.0f} FPS | {speed_str}{pause_str} | Cam: {cam_str}{rec_str}"
         )
 
         # Phase 5: Screenshot capture (after HUD rendering, before swap)
@@ -304,12 +315,18 @@ class BigBangSimApp(moderngl_window.WindowConfig):
             path = take_screenshot(self.ctx.fbo, self.wnd.size[0], self.wnd.size[1])
             print(f"Screenshot saved: {path}")
 
+        # Phase 5: Video frame capture (after HUD, frame-locked -- CAPT-02)
+        if self.recorder and self.recorder.recording:
+            self.recorder.write_frame(self.ctx.fbo)
+
     def _render_hud(self, state):
         """Render imgui HUD overlay after post-processing."""
         imgui.new_frame()
+        recording = self.recorder is not None and self.recorder.recording
         self.hud.render(
             state, self.sim, self.milestones,
-            self.camera_controller.is_auto, ERAS
+            self.camera_controller.is_auto, ERAS,
+            recording=recording,
         )
         imgui.render()
         self.imgui_renderer.render(imgui.get_draw_data())
@@ -437,6 +454,23 @@ class BigBangSimApp(moderngl_window.WindowConfig):
                 self._screenshot_requested = True
             elif key == keys.F11:
                 self.wnd.fullscreen = not self.wnd.fullscreen
+            elif key == keys.F9:
+                if self.recorder and self.recorder.recording:
+                    self.recorder.stop()
+                    print(f"Recording saved: {self.recorder.output_path}")
+                    self.recorder = None
+                elif self._ffmpeg_available:
+                    from datetime import datetime
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    self.recorder = VideoRecorder(
+                        self.wnd.size[0], self.wnd.size[1],
+                        fps=60,
+                        output_path=f"bigbangsim_{timestamp}.mp4",
+                    )
+                    self.recorder.start()
+                    print("Recording started...")
+                else:
+                    print("FFmpeg not found. Install via: winget install FFmpeg")
             elif key == keys.ESCAPE:
                 self.wnd.close()
 
@@ -478,5 +512,7 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         self.imgui_renderer.resize(width, height)
 
     def on_close(self):
-        """Save window state on application close (RNDR-05)."""
+        """Save window state and stop recording on application close."""
+        if self.recorder and self.recorder.recording:
+            self.recorder.stop()
         save_window_state(self.wnd)

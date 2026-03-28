@@ -32,6 +32,9 @@ from imgui_bundle import imgui
 _fa = imgui.ImFontAtlas
 if not hasattr(_fa, "get_tex_data_as_rgba32"):
     def _get_tex_data_as_rgba32(self):
+        if len(self.tex_list) == 0:
+            if len(self.fonts) == 0:
+                self.add_font_default()
         tex = self.tex_list[0]
         arr = tex.get_pixels_array()
         return arr.reshape((tex.height, tex.width, tex.bytes_per_pixel))

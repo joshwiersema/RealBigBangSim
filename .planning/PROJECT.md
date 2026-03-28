@@ -17,12 +17,14 @@ The simulation must be both scientifically accurate AND visually stunning — re
 - ✓ Logarithmic timeline spanning full cosmic history (10^-43 s to 13.8 Gyr) — Phase 1
 - ✓ Fixed-timestep simulation with Friedmann equation integration — Phase 1
 - ✓ Camera-relative rendering for float precision at cosmic scales — Phase 1
+- ✓ GPU-accelerated particle system (200K particles via compute shaders) — Phase 2
+- ✓ Post-processing pipeline (HDR, bloom, tone mapping) — Phase 2
+- ✓ Per-era shader architecture with shared utility libraries — Phase 2
 
 ### Active
 
 - [ ] Full cosmic timeline simulation (singularity through galaxy formation)
 - [ ] Real-time 3D rendering via ModernGL with GLSL shaders
-- [ ] GPU-accelerated particle system (100K-1M particles)
 - [ ] Scientifically accurate physics for each cosmological era
 - [ ] Cinematic auto-camera with smooth era transitions
 - [ ] Rich educational HUD (era labels, physics explanations, temperature/density readouts, milestone markers)
@@ -83,4 +85,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-28 after Phase 1 completion*
+*Last updated: 2026-03-28 after Phase 2 completion*

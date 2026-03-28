@@ -240,10 +240,10 @@ class TestParticleSystemBufferLogic:
 
 
 class TestParticleSystemShaderSelection:
-    """Test era-based shader variant switching."""
+    """Test era-based shader variant switching (Phase 3: 11 per-era shaders)."""
 
-    def test_default_shader_is_hot(self):
-        """Default active program key is 'hot'."""
+    def test_default_shader_is_era_00(self):
+        """Default active program key is 'era_00_planck' (Phase 3)."""
         from bigbangsim.rendering.particles import ParticleSystem
         from unittest.mock import MagicMock, patch
 
@@ -258,10 +258,34 @@ class TestParticleSystemShaderSelection:
             return_value="#version 430\nvoid main() {}",
         ):
             ps = ParticleSystem(mock_ctx, count=100)
-            assert ps.active_program_key == "hot"
+            assert ps.active_program_key == "era_00_planck"
 
-    def test_set_era_shader_hot_for_early_eras(self):
-        """Eras 0-5 use the 'hot' shader variant."""
+    def test_set_era_shader_selects_correct_key(self):
+        """set_era_shader selects the correct per-era shader key from EraVisualConfig."""
+        from bigbangsim.rendering.particles import ParticleSystem
+        from bigbangsim.simulation.era_visual_config import ERA_VISUAL_CONFIGS
+        from unittest.mock import MagicMock, patch
+
+        mock_ctx = MagicMock()
+        mock_ctx.buffer.return_value = MagicMock()
+        mock_ctx.compute_shader.return_value = MagicMock()
+        mock_ctx.program.return_value = MagicMock()
+        mock_ctx.vertex_array.return_value = MagicMock()
+
+        with patch(
+            "bigbangsim.rendering.particles.load_shader_source",
+            return_value="#version 430\nvoid main() {}",
+        ):
+            ps = ParticleSystem(mock_ctx, count=100)
+            for era_idx in range(11):
+                ps.set_era_shader(era_idx)
+                expected_key = ERA_VISUAL_CONFIGS[era_idx].shader_key
+                assert ps.active_program_key == expected_key, (
+                    f"Era {era_idx} should use '{expected_key}'"
+                )
+
+    def test_backward_compat_hot_cool_aliases(self):
+        """'hot' and 'cool' program keys exist as backward-compat aliases."""
         from bigbangsim.rendering.particles import ParticleSystem
         from unittest.mock import MagicMock, patch
 
@@ -276,26 +300,5 @@ class TestParticleSystemShaderSelection:
             return_value="#version 430\nvoid main() {}",
         ):
             ps = ParticleSystem(mock_ctx, count=100)
-            for era in range(6):
-                ps.set_era_shader(era)
-                assert ps.active_program_key == "hot", f"Era {era} should be 'hot'"
-
-    def test_set_era_shader_cool_for_late_eras(self):
-        """Eras 6-10 use the 'cool' shader variant."""
-        from bigbangsim.rendering.particles import ParticleSystem
-        from unittest.mock import MagicMock, patch
-
-        mock_ctx = MagicMock()
-        mock_ctx.buffer.return_value = MagicMock()
-        mock_ctx.compute_shader.return_value = MagicMock()
-        mock_ctx.program.return_value = MagicMock()
-        mock_ctx.vertex_array.return_value = MagicMock()
-
-        with patch(
-            "bigbangsim.rendering.particles.load_shader_source",
-            return_value="#version 430\nvoid main() {}",
-        ):
-            ps = ParticleSystem(mock_ctx, count=100)
-            for era in range(6, 11):
-                ps.set_era_shader(era)
-                assert ps.active_program_key == "cool", f"Era {era} should be 'cool'"
+            assert "hot" in ps.programs
+            assert "cool" in ps.programs

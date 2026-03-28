@@ -64,8 +64,8 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md -- Physics sub-modules (BBN yields, Saha equation, Jeans mass, Press-Schechter) and EraVisualConfig data structure
-- [ ] 03-02-PLAN.md -- All 11 per-era fragment shaders, upgraded compute shader, shared GLSL utilities, crossfade shader
+- [x] 03-01-PLAN.md -- Physics sub-modules (BBN yields, Saha equation, Jeans mass, Press-Schechter) and EraVisualConfig data structure
+- [x] 03-02-PLAN.md -- All 11 per-era fragment shaders, upgraded compute shader, shared GLSL utilities, crossfade shader
 - [ ] 03-03-PLAN.md -- EraTransitionManager, expanded ParticleSystem (11 programs), app.py integration with physics uniforms
 
 ### Phase 4: Presentation

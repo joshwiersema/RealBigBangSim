@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to plan
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-03-28T20:06:20.861Z"
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-03-28T20:59:10.394Z"
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  completed_phases: 3
+  total_plans: 9
+  completed_plans: 9
 ---
 
 # Project State
@@ -19,11 +19,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** The simulation must be both scientifically accurate AND visually stunning -- real cosmological physics driving beautiful real-time 3D rendering that teaches as it mesmerizes.
-**Current focus:** Phase 02 — core-rendering
+**Current focus:** Phase 03 — era-content
 
 ## Current Position
 
-Phase: 3
+Phase: 4
 Plan: Not started
 
 ## Performance Metrics
@@ -52,6 +52,9 @@ Plan: Not started
 | Phase 02 P01 | 5min | 2 tasks | 13 files |
 | Phase 02 P02 | 5min | 2 tasks | 4 files |
 | Phase 02 P03 | 3min | 2 tasks | 1 files |
+| Phase 03 P02 | 4min | 2 tasks | 18 files |
+| Phase 03 P01 | 8min | 2 tasks | 9 files |
+| Phase 03 P03 | 7min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -78,6 +81,14 @@ Recent decisions affecting current work:
 - [Phase 02]: 6 blur iterations (3H + 3V) default for bloom, balancing quality vs performance
 - [Phase 02]: Additive blending (GL_ONE, GL_ONE) for particles -- emissive light sources, not opaque objects
 - [Phase 02]: Post-processing scene pass wraps particle render; timeline overlay after post-processing to avoid bloom bleed into UI
+- [Phase 03]: Physics-specific uniforms scoped per-shader to avoid GLSL optimization KeyError (Phase 2 pitfall c94d2c1)
+- [Phase 03]: Compute shader uses uniform-driven behavior for per-era physics (expansion, noise, gravity, damping)
+- [Phase 03]: Numerically stable Saha solver: use 2A/(A+sqrt(A^2+4A)) for large A to avoid catastrophic cancellation
+- [Phase 03]: Physics sub-module pattern: build_*_table() + get_*() precomputed lookup with interpolation for GPU uniform data
+- [Phase 03]: EraVisualConfig frozen dataclass: per-era config data (shader_key, colors, params) in simulation layer, zero rendering imports
+- [Phase 03]: EraTransitionManager uses smoothstep blend curve for perceptually smooth crossfades
+- [Phase 03]: Physics lookup tables pre-computed at startup, not per-frame
+- [Phase 03]: Render loop split into _render_normal and _render_with_transition paths
 
 ### Pending Todos
 
@@ -90,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T20:00:16.582Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-03-28T20:51:06.208Z
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None

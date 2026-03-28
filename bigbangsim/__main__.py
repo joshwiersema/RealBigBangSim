@@ -1,3 +1,5 @@
-"""Entry point for running BigBangSim as a module: python -m bigbangsim"""
+"""Entry point: python -m bigbangsim"""
+from bigbangsim.app import BigBangSimApp
 
-print("BigBangSim v0.1.0 - launching...")
+if __name__ == "__main__":
+    BigBangSimApp.run()

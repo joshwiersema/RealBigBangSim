@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to plan
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-03-28T20:59:10.394Z"
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-03-28T21:33:38Z"
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 12
+  completed_plans: 12
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** The simulation must be both scientifically accurate AND visually stunning -- real cosmological physics driving beautiful real-time 3D rendering that teaches as it mesmerizes.
-**Current focus:** Phase 03 — era-content
+**Current focus:** Phase 04 — presentation
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
+Phase: 04 (presentation) — EXECUTING
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Plan: Not started
 | Phase 03 P02 | 4min | 2 tasks | 18 files |
 | Phase 03 P01 | 8min | 2 tasks | 9 files |
 | Phase 03 P03 | 7min | 2 tasks | 6 files |
+| Phase 04-presentation P03 | 5min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,9 @@ Recent decisions affecting current work:
 - [Phase 03]: EraTransitionManager uses smoothstep blend curve for perceptually smooth crossfades
 - [Phase 03]: Physics lookup tables pre-computed at startup, not per-frame
 - [Phase 03]: Render loop split into _render_normal and _render_with_transition paths
+- [Phase 04]: imgui HUD rendered after postfx.end_scene() to prevent bloom bleed into text
+- [Phase 04]: Timeline bar uses imgui foreground draw list for pixel-precise custom rendering
+- [Phase 04]: All 7 moderngl-window event types forwarded to imgui with want_capture guards
 
 ### Pending Todos
 
@@ -101,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T20:51:06.208Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-03-28T21:33:38Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None

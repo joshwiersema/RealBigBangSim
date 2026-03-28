@@ -1,11 +1,12 @@
 [project]
 name = "bigbangsim"
-version = "0.1.0"
+version = "1.0.0"
 description = "Cinematic, scientifically accurate Big Bang simulation in real-time 3D"
 requires-python = ">=3.11"
 dependencies = [
     "moderngl==5.12.0",
-    "moderngl-window==3.1.1",
+    "moderngl-window[imgui]==3.1.1",
+    "imgui-bundle>=1.92",
     "PyGLM==2.8.3",
     "numpy>=2.2,<3",
     "scipy>=1.14,<2",

@@ -26,16 +26,13 @@ The simulation must be both scientifically accurate AND visually stunning — re
 - ✓ imgui-bundle HUD with era labels, physics readouts, educational content — Phase 4
 - ✓ ~20 milestone markers at correct cosmic timestamps — Phase 4
 - ✓ Cinematic auto-camera with Catmull-Rom splines and free orbit toggle — Phase 4
+- ✓ Screenshot capture (PNG via Pillow, F12 keypress) — Phase 5
+- ✓ Video recording (MP4 via FFmpeg subprocess, frame-locked capture) — Phase 5
+- ✓ Fullscreen toggle (F11) with window state persistence — Phase 5
 
 ### Active
 
-- [ ] Real-time 3D rendering via ModernGL with GLSL shaders
-- [ ] Cinematic auto-camera with smooth era transitions
-- [ ] Rich educational HUD (era labels, physics explanations, temperature/density readouts, milestone markers)
 - [ ] Generative ambient soundscape evolving per era
-- [ ] Screenshot capture (high-res, any moment)
-- [ ] Video recording (full cinematic run to MP4)
-- [ ] Cosmological eras: Planck epoch, Grand Unification, Inflation, Quark-Gluon Plasma, Hadron epoch, Nucleosynthesis, Recombination/CMB, Dark Ages, Reionization/First Stars, Galaxy Formation, Large-Scale Structure
 
 ### Out of Scope
 
@@ -89,4 +86,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-28 after Phase 4 completion*
+*Last updated: 2026-03-28 after Phase 5 completion (v1.0 milestone complete)*

@@ -2,12 +2,15 @@
 
 Subclasses moderngl_window.WindowConfig to create an OpenGL 4.3 window
 with GPU particle rendering, post-processing bloom pipeline, orbit camera,
-simulation controls, and timeline bar.
+simulation controls, imgui HUD overlay, milestone system, and cinematic
+auto-camera.
 
-Phase 3: Integrated per-era visual configs, physics sub-module uniforms,
-and FBO crossfade transitions. Each of the 11 eras has unique shader
-selection, bloom parameters, compute behavior, and optional physics-
-specific uniforms (helium fraction, ionization, collapsed fraction).
+Phase 4: Integrated imgui-bundle HUD overlay (HUD-01..HUD-05), milestone
+notification system (PHYS-04), and cinematic camera controller (CAMR-02/03).
+The GLSL timeline bar has been replaced by an imgui-drawn version. All 7
+moderngl-window input events are forwarded to imgui for correct widget
+interaction. HUD renders AFTER post-processing to avoid bloom bleeding
+into text.
 
 PHYS-07: The render loop uses view_matrix_camera_relative() with double-precision
 camera coordinates instead of the float32 camera.view_matrix property.
@@ -18,6 +21,9 @@ from pathlib import Path
 
 import glm
 import numpy as np
+
+from imgui_bundle import imgui
+from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
 
 from bigbangsim.config import WINDOW_WIDTH, WINDOW_HEIGHT, PHYSICS_DT
 from bigbangsim.simulation.engine import SimulationEngine
@@ -41,9 +47,15 @@ from bigbangsim.rendering.particles import ParticleSystem
 from bigbangsim.rendering.postprocessing import PostProcessingPipeline
 from bigbangsim.rendering.era_transition import EraTransitionManager
 
+from bigbangsim.presentation.hud import HUDManager
+from bigbangsim.presentation.milestones import MilestoneManager
+from bigbangsim.presentation.camera_controller import CinematicCameraController
+from bigbangsim.presentation.educational_content import MILESTONES
+
 
 class BigBangSimApp(moderngl_window.WindowConfig):
-    """Phase 3 application: per-era visuals + physics uniforms + transitions."""
+    """Phase 4 application: per-era visuals, physics uniforms, transitions,
+    imgui HUD, milestones, and cinematic auto-camera."""
 
     title = "BigBangSim - Cosmic Evolution"
     window_size = (WINDOW_WIDTH, WINDOW_HEIGHT)
@@ -82,94 +94,13 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         self.ionization_table = build_ionization_table(n_points=500)
         self.collapsed_fraction_table = build_collapsed_fraction_table(n_points=200)
 
-        # Load timeline bar shader and create geometry
-        self.timeline_bar_prog = self._load_shader("timeline_bar")
-        self._create_timeline_bar()
+        # --- Phase 4: imgui + presentation layer ---
+        imgui.create_context()
+        self.imgui_renderer = ModernglWindowRenderer(self.wnd)
 
-    def _load_shader(self, name: str) -> moderngl.Program:
-        """Load vertex + fragment shader pair from resource_dir."""
-        vert_path = self.resource_dir / f"{name}.vert"
-        frag_path = self.resource_dir / f"{name}.frag"
-        return self.ctx.program(
-            vertex_shader=vert_path.read_text(),
-            fragment_shader=frag_path.read_text(),
-        )
-
-    def _create_timeline_bar(self):
-        """Create timeline bar geometry as a horizontal bar at the bottom of the screen.
-
-        Bar spans from x=-0.9 to x=0.9 in NDC, at y=-0.92 to y=-0.85.
-        Each era gets a proportional segment colored by era index.
-        """
-        vertices = []
-        total = sum(e.screen_seconds for e in ERAS)
-        x_start = -0.9
-        x_range = 1.8  # from -0.9 to +0.9
-
-        # Era colors (11 distinct colors)
-        era_colors = [
-            (1.0, 1.0, 1.0),   # 0: Planck - white
-            (0.8, 0.6, 1.0),   # 1: GUT - lavender
-            (1.0, 0.9, 0.3),   # 2: Inflation - yellow
-            (1.0, 0.3, 0.1),   # 3: QGP - orange-red
-            (0.9, 0.5, 0.2),   # 4: Hadron - orange
-            (0.3, 0.8, 0.3),   # 5: Nucleosynthesis - green
-            (1.0, 0.8, 0.4),   # 6: CMB - warm yellow
-            (0.15, 0.1, 0.2),  # 7: Dark Ages - near black
-            (0.4, 0.6, 1.0),   # 8: First Stars - blue
-            (0.6, 0.4, 0.8),   # 9: Galaxy Formation - purple
-            (0.3, 0.5, 0.9),   # 10: Large-Scale Structure - deep blue
-        ]
-
-        cumulative = 0.0
-        for i, era in enumerate(ERAS):
-            x0 = x_start + (cumulative / total) * x_range
-            x1 = x_start + ((cumulative + era.screen_seconds) / total) * x_range
-            y0 = -0.92
-            y1 = -0.85
-            r, g, b = era_colors[i]
-            # Two triangles per quad
-            vertices.extend([
-                x0, y0, r, g, b,
-                x1, y0, r, g, b,
-                x0, y1, r, g, b,
-                x0, y1, r, g, b,
-                x1, y0, r, g, b,
-                x1, y1, r, g, b,
-            ])
-            cumulative += era.screen_seconds
-
-        vert_arr = np.array(vertices, dtype=np.float32)
-        vbo = self.ctx.buffer(vert_arr.tobytes())
-        self.timeline_vao = self.ctx.vertex_array(
-            self.timeline_bar_prog,
-            [(vbo, '2f 3f', 'in_position', 'in_color')],
-        )
-        self.timeline_vertex_count = len(ERAS) * 6
-
-        # Progress indicator (a small white quad that moves along the bar)
-        # Will be updated each frame
-        indicator_verts = np.zeros(6 * 5, dtype=np.float32)
-        self.indicator_vbo = self.ctx.buffer(indicator_verts.tobytes(), dynamic=True)
-        self.indicator_vao = self.ctx.vertex_array(
-            self.timeline_bar_prog,
-            [(self.indicator_vbo, '2f 3f', 'in_position', 'in_color')],
-        )
-
-    def _update_indicator(self, progress: float):
-        """Update the progress indicator position on the timeline bar."""
-        x = -0.9 + progress * 1.8
-        hw = 0.005  # half-width of indicator
-        y0, y1 = -0.94, -0.83
-        verts = np.array([
-            x - hw, y0, 1.0, 1.0, 1.0,
-            x + hw, y0, 1.0, 1.0, 1.0,
-            x - hw, y1, 1.0, 1.0, 1.0,
-            x - hw, y1, 1.0, 1.0, 1.0,
-            x + hw, y0, 1.0, 1.0, 1.0,
-            x + hw, y1, 1.0, 1.0, 1.0,
-        ], dtype=np.float32)
-        self.indicator_vbo.write(verts.tobytes())
+        self.hud = HUDManager()
+        self.milestones = MilestoneManager(MILESTONES)
+        self.camera_controller = CinematicCameraController(self.camera)
 
     def _compute_physics_uniforms(self, state) -> dict[str, float]:
         """Compute era-specific physics uniforms from simulation state.
@@ -258,17 +189,19 @@ class BigBangSimApp(moderngl_window.WindowConfig):
             compute['u_damping'].value = config.damping
 
     def on_render(self, time: float, frame_time: float):
-        """Main render loop with per-era visuals, physics uniforms, and transitions.
+        """Main render loop with per-era visuals, physics, transitions, and HUD.
 
         Render order:
         1. Update simulation -> PhysicsState
-        2. Update camera damping
-        3. Look up current era's visual config
-        4. Upload per-era compute uniforms and update particles
-        5. Switch to current era's shader
-        6. Check for era transition
-        7. Render (with or without crossfade transition)
-        8. Render timeline bar overlay (after post-processing)
+        2. Update milestones
+        3. Update camera damping
+        4. Update cinematic camera controller
+        5. Look up current era's visual config
+        6. Upload per-era compute uniforms and update particles
+        7. Switch to current era's shader
+        8. Check for era transition
+        9. Render (with or without crossfade transition)
+        10. Render imgui HUD overlay (AFTER post-processing)
 
         PHYS-07: View matrix is computed via view_matrix_camera_relative()
         using double-precision camera position/target.
@@ -276,31 +209,37 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         # 1. Update simulation
         state, alpha = self.sim.update(frame_time)
 
-        # 2. Update camera
+        # 2. Update milestones
+        self.milestones.update(state.cosmic_time, frame_time)
+
+        # 3. Update camera damping
         self.camera.update(frame_time)
 
-        # 3. Look up current era's visual config
+        # 4. Update cinematic camera controller
+        self.camera_controller.update(frame_time, state.current_era, state.era_progress)
+
+        # 5. Look up current era's visual config
         config = get_era_visual_config(state.current_era)
 
-        # 4. Update bloom parameters per era
+        # 6. Update bloom parameters per era
         self.postfx.bloom_strength = config.bloom_strength
         self.postfx.bloom_threshold = config.bloom_threshold
 
-        # 5. Upload per-era compute uniforms BEFORE dispatch
+        # 7. Upload per-era compute uniforms BEFORE dispatch
         self._upload_compute_uniforms(config)
 
-        # 6. Update particle system via compute shader
+        # 8. Update particle system via compute shader
         self.particles.update(PHYSICS_DT, state)
 
-        # 7. Switch to current era's shader
+        # 9. Switch to current era's shader
         self.particles.set_era_shader(state.current_era)
 
-        # 8. Check for era transition
+        # 10. Check for era transition
         self.transition.check_transition(
             state.current_era, frame_time, config.transition_seconds
         )
 
-        # 9. Compute matrices -- PHYS-07: use double-precision camera-relative path
+        # 11. Compute matrices -- PHYS-07: use double-precision camera-relative path
         proj = self.camera.projection_matrix
         view = view_matrix_camera_relative(
             self.camera.position_dvec3,
@@ -309,10 +248,10 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         proj_bytes = bytes(proj)
         view_bytes = bytes(view)
 
-        # 10. Compute physics uniforms for the current era
+        # 12. Compute physics uniforms for the current era
         physics_uniforms = self._compute_physics_uniforms(state)
 
-        # 11. Render scene (with or without transition crossfade)
+        # 13. Render scene (with or without transition crossfade)
         if self.transition.in_transition:
             self._render_with_transition(
                 state, config, physics_uniforms, proj_bytes, view_bytes
@@ -322,29 +261,30 @@ class BigBangSimApp(moderngl_window.WindowConfig):
                 state, config, physics_uniforms, proj_bytes, view_bytes
             )
 
-        # 12. Timeline bar overlay (rendered AFTER post-processing, directly to screen)
-        self.ctx.disable(moderngl.DEPTH_TEST)
-        total_screen = self.sim.timeline.total_duration()
-        progress = self.sim.screen_time / total_screen if total_screen > 0 else 0.0
-        self.timeline_bar_prog['u_progress'].value = progress
-        self.timeline_bar_prog['u_era_progress'].value = state.era_progress
-        self.timeline_vao.render(moderngl.TRIANGLES, vertices=self.timeline_vertex_count)
-        self._update_indicator(progress)
-        self.indicator_vao.render(moderngl.TRIANGLES, vertices=6)
+        # 14. HUD overlay (rendered AFTER post-processing, directly to default framebuffer)
+        self._render_hud(state)
 
-        # Re-enable depth test for next frame
-        self.ctx.enable(moderngl.DEPTH_TEST)
-
-        # Window title with FPS and particle count
+        # Window title with FPS, particle count, and camera mode
         era_name = ERAS[state.current_era].name if 0 <= state.current_era < len(ERAS) else "?"
         speed_str = f"{self.sim.speed_multiplier:.1f}x"
         pause_str = " [PAUSED]" if self.sim.paused else ""
         fps = 1.0 / frame_time if frame_time > 0 else 0.0
+        cam_str = "Auto" if self.camera_controller.is_auto else "Free"
         self.wnd.title = (
             f"BigBangSim - {era_name} | T={state.temperature:.1f}K | "
             f"{self.particles.count // 1000}K particles | "
-            f"{fps:.0f} FPS | {speed_str}{pause_str}"
+            f"{fps:.0f} FPS | {speed_str}{pause_str} | Cam: {cam_str}"
         )
+
+    def _render_hud(self, state):
+        """Render imgui HUD overlay after post-processing."""
+        imgui.new_frame()
+        self.hud.render(
+            state, self.sim, self.milestones,
+            self.camera_controller.is_auto, ERAS
+        )
+        imgui.render()
+        self.imgui_renderer.render(imgui.get_draw_data())
 
     def _render_with_transition(
         self, state, config, physics_uniforms, proj_bytes, view_bytes
@@ -445,9 +385,14 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         self.postfx.end_scene()
 
     # --- Input Handling ---
+    # All 7 event types forwarded to imgui first (Pitfall 2 from research).
 
     def on_key_event(self, key, action, modifiers):
-        """Handle keyboard input for simulation controls."""
+        """Handle keyboard input for simulation and presentation controls."""
+        self.imgui_renderer.key_event(key, action, modifiers)
+        io = imgui.get_io()
+        if io.want_capture_keyboard:
+            return
         keys = self.wnd.keys
         if action == keys.ACTION_PRESS:
             if key == keys.SPACE:
@@ -456,19 +401,46 @@ class BigBangSimApp(moderngl_window.WindowConfig):
                 self.sim.increase_speed()
             elif key == keys.MINUS:
                 self.sim.decrease_speed()
+            elif key == keys.H:
+                self.hud.toggle()
+            elif key == keys.C:
+                self.camera_controller.toggle_mode()
             elif key == keys.ESCAPE:
                 self.wnd.close()
 
     def on_mouse_drag_event(self, x: int, y: int, dx: int, dy: int):
-        """Left-click drag: orbit camera."""
-        self.camera.on_mouse_drag(dx, dy)
+        """Left-click drag: orbit camera (guarded by imgui capture)."""
+        self.imgui_renderer.mouse_drag_event(x, y, dx, dy)
+        io = imgui.get_io()
+        if not io.want_capture_mouse:
+            self.camera.on_mouse_drag(dx, dy)
 
     def on_mouse_scroll_event(self, x_offset: float, y_offset: float):
-        """Scroll: zoom camera."""
-        self.camera.on_scroll(y_offset)
+        """Scroll: zoom camera (guarded by imgui capture)."""
+        self.imgui_renderer.mouse_scroll_event(x_offset, y_offset)
+        io = imgui.get_io()
+        if not io.want_capture_mouse:
+            self.camera.on_scroll(y_offset)
+
+    def on_mouse_position_event(self, x: int, y: int, dx: int, dy: int):
+        """Forward mouse position to imgui for hover detection."""
+        self.imgui_renderer.mouse_position_event(x, y, dx, dy)
+
+    def on_mouse_press_event(self, x: int, y: int, button: int):
+        """Forward mouse press to imgui for click detection."""
+        self.imgui_renderer.mouse_press_event(x, y, button)
+
+    def on_mouse_release_event(self, x: int, y: int, button: int):
+        """Forward mouse release to imgui for click detection."""
+        self.imgui_renderer.mouse_release_event(x, y, button)
+
+    def on_unicode_char_entered(self, char: str):
+        """Forward unicode character input to imgui for text fields."""
+        self.imgui_renderer.unicode_char_entered(char)
 
     def on_resize(self, width: int, height: int):
-        """Handle window resize: update camera, post-processing, and transition FBOs."""
+        """Handle window resize: update camera, post-processing, transition, and imgui."""
         self.camera.aspect = width / height if height > 0 else 16 / 9
         self.postfx.resize(width, height)
         self.transition.resize(width, height)
+        self.imgui_renderer.resize(width, height)

@@ -2,8 +2,8 @@
 phase: 3
 slug: era-content
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-28
 ---
 
@@ -38,11 +38,11 @@ created: 2026-03-28
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 03-01-01 | 01 | 1 | PHYS-01, PHYS-02 | unit | `python -m pytest tests/test_era_physics.py -v` | ❌ W0 | ⬜ pending |
-| 03-01-02 | 01 | 1 | RNDR-03 | unit | `python -m pytest tests/test_era_visuals.py -v` | ❌ W0 | ⬜ pending |
-| 03-02-01 | 02 | 2 | RNDR-03 | unit | `python -m pytest tests/test_era_shaders.py -v` | ❌ W0 | ⬜ pending |
-| 03-02-02 | 02 | 2 | RNDR-04 | unit | `python -m pytest tests/test_transitions.py -v` | ❌ W0 | ⬜ pending |
-| 03-03-01 | 03 | 3 | PHYS-01 | integration | `python -m pytest tests/ -v` | ✅ | ⬜ pending |
+| 03-01-01 | 01 | 1 | PHYS-01, PHYS-02 | unit+tdd | `python -m pytest tests/test_nucleosynthesis.py tests/test_recombination.py tests/test_structure.py -v` | TDD | ⬜ pending |
+| 03-01-02 | 01 | 1 | RNDR-03 | unit+tdd | `python -m pytest tests/test_era_visual_config.py -v` | TDD | ⬜ pending |
+| 03-02-01 | 02 | 1 | RNDR-03 | unit | `python -m pytest tests/test_era_shaders.py -v` | TDD | ⬜ pending |
+| 03-03-01 | 03 | 2 | RNDR-03, RNDR-04 | unit | `python -m pytest tests/test_era_transitions.py tests/test_era_sequence.py -v` | TDD | ⬜ pending |
+| 03-03-02 | 03 | 2 | PHYS-01, PHYS-02 | integration | `python -m pytest tests/ -v` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠ flaky*
 
@@ -50,10 +50,7 @@ created: 2026-03-28
 
 ## Wave 0 Requirements
 
-- [ ] `tests/test_era_physics.py` — stubs for PHYS-01, PHYS-02 (BBN yields, Saha equation, Jeans instability, Press-Schechter)
-- [ ] `tests/test_era_visuals.py` — stubs for RNDR-03 (EraVisualConfig per era, color palettes)
-- [ ] `tests/test_era_shaders.py` — stubs for RNDR-03 (per-era fragment shader loading)
-- [ ] `tests/test_transitions.py` — stubs for RNDR-04 (crossfade transition logic)
+*Plan 01 Task 1 uses TDD (tests written alongside implementation). Plan 02 and 03 similarly create tests within their tasks. No separate Wave 0 stubs needed — test creation is integrated into each task's execution.*
 
 *Existing conftest.py and pytest infrastructure from Phase 1 covers framework needs.*
 

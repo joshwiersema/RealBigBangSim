@@ -20,12 +20,13 @@ The simulation must be both scientifically accurate AND visually stunning — re
 - ✓ GPU-accelerated particle system (200K particles via compute shaders) — Phase 2
 - ✓ Post-processing pipeline (HDR, bloom, tone mapping) — Phase 2
 - ✓ Per-era shader architecture with shared utility libraries — Phase 2
+- ✓ All 11 cosmological eras with distinct visuals and physics models — Phase 3
+- ✓ Smooth FBO-based crossfade transitions between eras — Phase 3
+- ✓ Scientifically accurate physics (BBN, Saha, Jeans, Press-Schechter) — Phase 3
 
 ### Active
 
-- [ ] Full cosmic timeline simulation (singularity through galaxy formation)
 - [ ] Real-time 3D rendering via ModernGL with GLSL shaders
-- [ ] Scientifically accurate physics for each cosmological era
 - [ ] Cinematic auto-camera with smooth era transitions
 - [ ] Rich educational HUD (era labels, physics explanations, temperature/density readouts, milestone markers)
 - [ ] Generative ambient soundscape evolving per era
@@ -85,4 +86,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-28 after Phase 2 completion*
+*Last updated: 2026-03-28 after Phase 3 completion*

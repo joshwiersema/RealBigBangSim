@@ -91,7 +91,7 @@ class PostProcessingPipeline:
     def begin_scene(self) -> None:
         """Bind the HDR FBO for scene rendering. Call before rendering particles."""
         self.hdr_fbo.use()
-        self.hdr_fbo.clear(0.0, 0.0, 0.0, 0.0)
+        self.hdr_fbo.clear(0.0, 0.0, 0.05, 1.0)  # Dim blue — diagnostic: proves postfx works
 
     def end_scene(self, target_fbo=None) -> None:
         """Run the bloom + tone mapping chain, output to target_fbo or screen.

@@ -70,6 +70,51 @@ class _CompatRenderer(_Base):
         tex.set_tex_id(self._font_texture.glo)
         tex.set_status(imgui.ImTextureStatus.ok)
 
+    def _process_texture_updates(self, draw_data: imgui.ImDrawData):
+        """Process imgui 1.92+ texture lifecycle (create/update/destroy).
+
+        imgui-bundle 1.92+ with renderer_has_textures requires the backend
+        to handle texture status changes each frame via draw_data.textures.
+        Without this, imgui suppresses all draw commands (0 vertices).
+        """
+        for tex in draw_data.textures:
+            if tex.status == imgui.ImTextureStatus.want_create:
+                pixels = tex.get_pixels_array()
+                width, height = tex.width, tex.height
+                if self._font_texture:
+                    self.remove_texture(self._font_texture)
+                    self._font_texture.release()
+                self._font_texture = self.ctx.texture(
+                    (width, height), 4, data=pixels,
+                )
+                self.register_texture(self._font_texture)
+                tex.set_tex_id(self._font_texture.glo)
+                tex.set_status(imgui.ImTextureStatus.ok)
+            elif tex.status == imgui.ImTextureStatus.want_updates:
+                pixels = tex.get_pixels_array()
+                width, height = tex.width, tex.height
+                if (self._font_texture
+                        and self._font_texture.size == (width, height)):
+                    self._font_texture.write(pixels)
+                else:
+                    # Size changed — recreate
+                    if self._font_texture:
+                        self.remove_texture(self._font_texture)
+                        self._font_texture.release()
+                    self._font_texture = self.ctx.texture(
+                        (width, height), 4, data=pixels,
+                    )
+                    self.register_texture(self._font_texture)
+                    tex.set_tex_id(self._font_texture.glo)
+                tex.set_status(imgui.ImTextureStatus.ok)
+            elif tex.status == imgui.ImTextureStatus.want_destroy:
+                if self._font_texture:
+                    self.remove_texture(self._font_texture)
+                    self._font_texture.release()
+                    self._font_texture = None
+                tex.set_tex_id(0)
+                tex.set_status(imgui.ImTextureStatus.destroyed)
+
     def render(self, draw_data: imgui.ImDrawData):
         io = self.io
         display_width, display_height = io.display_size
@@ -77,6 +122,13 @@ class _CompatRenderer(_Base):
         fb_height = int(display_height * io.display_framebuffer_scale[1])
 
         if fb_width == 0 or fb_height == 0:
+            return
+
+        # Process texture lifecycle BEFORE rendering draw commands.
+        # imgui 1.92+ suppresses draw commands until textures are marked ok.
+        self._process_texture_updates(draw_data)
+
+        if not self._font_texture:
             return
 
         self.projMat.value = (
@@ -323,7 +375,8 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         """Upload per-era compute shader uniforms.
 
         Controls how particles move differently in each era (expansion,
-        turbulence, gravity, damping).
+        turbulence, gravity, damping).  Also sets the containment radius
+        so particles are recycled before drifting beyond the camera.
 
         Args:
             config: EraVisualConfig with expansion_rate, noise_strength, etc.
@@ -337,6 +390,8 @@ class BigBangSimApp(moderngl_window.WindowConfig):
             compute['u_gravity_strength'].value = config.gravity_strength
         if 'u_damping' in compute:
             compute['u_damping'].value = config.damping
+        if 'u_containment_radius' in compute:
+            compute['u_containment_radius'].value = config.containment_radius
 
     def on_render(self, time: float, frame_time: float):
         """Main render loop with per-era visuals, physics, transitions, and HUD.

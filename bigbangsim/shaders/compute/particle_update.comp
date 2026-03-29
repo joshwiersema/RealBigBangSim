@@ -11,6 +11,15 @@ layout(std430, binding = 1) writeonly buffer ParticlesOut {
     Particle particles_out[];
 };
 
+// Simple hash for pseudo-random respawn (deterministic per particle index)
+vec3 hash3(uint seed) {
+    uvec3 s = uvec3(seed, seed * 2654435761u, seed * 2246822519u);
+    s ^= s >> 16u;
+    s *= uvec3(0x45d9f3bu, 0x119de1f3u, 0x16a6b885u);
+    s ^= s >> 16u;
+    return vec3(s) / float(0xFFFFFFFFu) * 2.0 - 1.0;  // [-1, 1]
+}
+
 void main() {
     uint idx = gl_GlobalInvocationID.x;
     if (idx >= u_particle_count) return;
@@ -44,6 +53,24 @@ void main() {
 
     // Integrate position
     pos += vel * u_dt;
+
+    // Containment: respawn particles that drift beyond the containment radius.
+    // Uses a soft boundary -- particles beyond 80% of the radius get pulled back,
+    // and particles beyond 100% are teleported to a random position near origin.
+    float radius = max(u_containment_radius, 1.0);
+    float dist = length(pos);
+    if (dist > radius) {
+        // Respawn: hash-based pseudo-random position within inner 40% of radius
+        vec3 rnd = hash3(idx + uint(u_era_progress * 1000.0));
+        float rnd_len = max(length(rnd), 0.001);
+        pos = (rnd / rnd_len) * (0.4 * radius * (0.2 + 0.8 * abs(rnd.x)));
+        vel = rnd * 0.1;  // Small random velocity
+        life = 1.0;       // Reset life
+    } else if (dist > radius * 0.8) {
+        // Soft pull-back: gentle inward force near boundary
+        float excess = (dist - radius * 0.8) / (radius * 0.2);
+        vel -= normalize(pos) * excess * 2.0 * u_dt;
+    }
 
     // Age particle
     life = clamp(life - 0.001 * u_dt, 0.0, 1.0);

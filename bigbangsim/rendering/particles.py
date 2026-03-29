@@ -226,6 +226,8 @@ class ParticleSystem:
             self.compute['u_gravity_strength'].value = config.gravity_strength
         if 'u_damping' in self.compute:
             self.compute['u_damping'].value = config.damping
+        if 'u_containment_radius' in self.compute:
+            self.compute['u_containment_radius'].value = config.containment_radius
 
         # Physics-specific uniforms (era-dependent)
         if physics_uniforms:

@@ -47,6 +47,7 @@ class EraVisualConfig:
     damping: float
     brightness: float
     transition_seconds: float
+    containment_radius: float = 50.0
 
 
 ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
@@ -66,6 +67,7 @@ ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
         damping=0.02,
         brightness=3.0,
         transition_seconds=2.0,
+        containment_radius=15.0,
     ),
     # Era 1: Grand Unification
     # Gravity separates; high-energy golden glow with violet symmetry breaking.
@@ -83,6 +85,7 @@ ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
         damping=0.02,
         brightness=2.5,
         transition_seconds=2.0,
+        containment_radius=20.0,
     ),
     # Era 2: Inflation
     # Exponential expansion; bright yellow-white stretching outward.
@@ -100,6 +103,7 @@ ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
         damping=0.005,
         brightness=2.5,
         transition_seconds=1.5,
+        containment_radius=30.0,
     ),
     # Era 3: Quark-Gluon Plasma
     # Superhot plasma; deep orange-red with golden highlights.
@@ -117,6 +121,7 @@ ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
         damping=0.015,
         brightness=2.0,
         transition_seconds=2.0,
+        containment_radius=35.0,
     ),
     # Era 4: Hadron Epoch
     # Quarks combine into nucleons; warm orange with amber highlights.
@@ -134,6 +139,7 @@ ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
         damping=0.02,
         brightness=1.8,
         transition_seconds=2.0,
+        containment_radius=40.0,
     ),
     # Era 5: Nucleosynthesis
     # Light elements form; green-gold nuclear glow.
@@ -151,6 +157,7 @@ ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
         damping=0.02,
         brightness=1.6,
         transition_seconds=2.0,
+        containment_radius=45.0,
     ),
     # Era 6: Recombination / CMB
     # Electrons bind to nuclei; warm orange fading to deep violet.
@@ -168,6 +175,7 @@ ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
         damping=0.025,
         brightness=1.5,
         transition_seconds=3.0,
+        containment_radius=50.0,
     ),
     # Era 7: Dark Ages
     # No stars; deep dark blue-black void.
@@ -185,6 +193,7 @@ ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
         damping=0.03,
         brightness=0.15,
         transition_seconds=2.5,
+        containment_radius=60.0,
     ),
     # Era 8: First Stars / Reionization
     # First massive stars ignite; dark blue backdrop with bright blue-white stars.
@@ -202,6 +211,7 @@ ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
         damping=0.02,
         brightness=0.8,
         transition_seconds=2.5,
+        containment_radius=70.0,
     ),
     # Era 9: Galaxy Formation
     # Gravity assembles galaxies; deep violet with blue-white spiral hints.
@@ -219,6 +229,7 @@ ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
         damping=0.015,
         brightness=1.0,
         transition_seconds=2.0,
+        containment_radius=80.0,
     ),
     # Era 10: Large-Scale Structure
     # Cosmic web matures; dark indigo with warm golden filaments.
@@ -236,6 +247,7 @@ ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
         damping=0.015,
         brightness=1.0,
         transition_seconds=2.0,
+        containment_radius=100.0,
     ),
 ]
 

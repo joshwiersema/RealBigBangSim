@@ -76,10 +76,12 @@ def load_window_state(path: Path | None = None) -> dict | None:
         return None
     try:
         data = json.loads(target.read_text())
-        # Validate and clamp position to reasonable bounds
+        # Validate and clamp position to reasonable bounds.
+        # Y must be >= 40 to keep the title bar visible on screen
+        # (Windows title bar is ~30px, plus margin).
         if "position" in data:
             x, y = data["position"]
-            data["position"] = [max(0, min(x, 4000)), max(0, min(y, 3000))]
+            data["position"] = [max(0, min(x, 4000)), max(40, min(y, 3000))]
         return data
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         return None

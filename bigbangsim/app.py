@@ -297,21 +297,30 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         # --- Phase 5: Capture & Polish ---
         self._screenshot_requested = False
 
+        # CRITICAL: Save a reference to the REAL screen FBO (glo=0).
+        # moderngl_window's pyglet backend may replace ctx.fbo with an
+        # offscreen FBO between __init__ and the first on_render call.
+        # We need the real screen FBO for the final blit to display.
+        self._screen_fbo = self.ctx.detect_framebuffer(glo=0)
+
         # Video recorder (CAPT-02, CAPT-03) -- None until recording starts
         self.recorder: VideoRecorder | None = None
         self._ffmpeg_available = VideoRecorder.is_available()
 
-        # Restore saved window state (RNDR-05)
+        # Restore saved window state (RNDR-05).
         saved_state = load_window_state()
         if saved_state:
             if saved_state.get("fullscreen"):
-                self.wnd.fullscreen = True
+                try:
+                    self.wnd.fullscreen = True
+                except Exception:
+                    pass
             elif "position" in saved_state and "size" in saved_state:
                 try:
                     self.wnd.position = tuple(saved_state["position"])
                     self.wnd.size = tuple(saved_state["size"])
                 except Exception:
-                    pass  # Ignore if backend doesn't support position/size set
+                    pass
 
     def _compute_physics_uniforms(self, state) -> dict[str, float]:
         """Compute era-specific physics uniforms from simulation state.
@@ -403,24 +412,8 @@ class BigBangSimApp(moderngl_window.WindowConfig):
             compute['u_containment_radius'].value = config.containment_radius
 
     def on_render(self, time: float, frame_time: float):
-        """Main render loop with per-era visuals, physics, transitions, and HUD.
-
-        Render order:
-        1. Update simulation -> PhysicsState
-        2. Update milestones
-        3. Update camera damping
-        4. Update cinematic camera controller
-        5. Look up current era's visual config
-        6. Upload per-era compute uniforms and update particles
-        7. Switch to current era's shader
-        8. Check for era transition
-        9. Render (with or without crossfade transition)
-        10. Render imgui HUD overlay (AFTER post-processing)
-
-        PHYS-07: View matrix is computed via view_matrix_camera_relative()
-        using double-precision camera position/target.
-        """
-        # 1. Update simulation (frame-locked during recording -- CAPT-03)
+        """Main render loop with per-era visuals, physics, transitions, and HUD."""
+        # 1. Update simulation
         effective_frame_time = frame_time
         if self.recorder and self.recorder.recording:
             override = self.recorder.frame_time_override
@@ -440,9 +433,10 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         # 5. Look up current era's visual config
         config = get_era_visual_config(state.current_era)
 
-        # 6. Update bloom parameters per era
+        # 6. Update post-processing parameters per era
         self.postfx.bloom_strength = config.bloom_strength
         self.postfx.bloom_threshold = config.bloom_threshold
+        self.postfx.exposure = config.exposure
 
         # 7. Upload per-era compute uniforms BEFORE dispatch
         self._upload_compute_uniforms(config)
@@ -458,14 +452,12 @@ class BigBangSimApp(moderngl_window.WindowConfig):
             state.current_era, frame_time, config.transition_seconds
         )
 
-        # 11. Compute matrices -- PHYS-07: use double-precision camera-relative path
+        # 11. Compute matrices
         proj = self.camera.projection_matrix
         view = view_matrix_camera_relative(
             self.camera.position_dvec3,
             self.camera.target_dvec3,
         )
-        # bytes(glm.mat4) gives ROW-MAJOR data, but OpenGL expects COLUMN-MAJOR.
-        # Use numpy Fortran-order (column-major) serialization instead.
         proj_bytes = np.array(proj, dtype='f4').tobytes(order='F')
         view_bytes = np.array(view, dtype='f4').tobytes(order='F')
 
@@ -482,11 +474,16 @@ class BigBangSimApp(moderngl_window.WindowConfig):
                 state, config, physics_uniforms, proj_bytes, view_bytes
             )
 
-
-        # 14. HUD overlay (rendered AFTER post-processing, directly to default framebuffer)
+        # 14. HUD overlay
         self._render_hud(state)
 
-        # Window title with FPS, particle count, camera mode, and recording status
+        # Blit rendered content to the REAL screen FBO (glo=0).
+        # moderngl_window may swap ctx.fbo to an offscreen FBO, so we
+        # must explicitly copy the final image to the actual screen.
+        if self._screen_fbo.glo != self.ctx.fbo.glo:
+            self.ctx.copy_framebuffer(self._screen_fbo, self.ctx.fbo)
+
+        # Window title
         era_name = ERAS[state.current_era].name if 0 <= state.current_era < len(ERAS) else "?"
         speed_str = f"{self.sim.speed_multiplier:.1f}x"
         pause_str = " [PAUSED]" if self.sim.paused else ""
@@ -499,13 +496,13 @@ class BigBangSimApp(moderngl_window.WindowConfig):
             f"{fps:.0f} FPS | {speed_str}{pause_str} | Cam: {cam_str}{rec_str}"
         )
 
-        # Phase 5: Screenshot capture (after HUD rendering, before swap)
+        # Phase 5: Screenshot capture
         if self._screenshot_requested:
             self._screenshot_requested = False
             path = take_screenshot(self.ctx.fbo, self.wnd.size[0], self.wnd.size[1])
             print(f"Screenshot saved: {path}")
 
-        # Phase 5: Video frame capture (after HUD, frame-locked -- CAPT-02)
+        # Phase 5: Video frame capture
         if self.recorder and self.recorder.recording:
             self.recorder.write_frame(self.ctx.fbo)
 

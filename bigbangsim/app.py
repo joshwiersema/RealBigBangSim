@@ -535,24 +535,70 @@ class BigBangSimApp(moderngl_window.WindowConfig):
             proj_bytes: Projection matrix as bytes.
             view_bytes: View matrix as bytes.
         """
-        # Render directly to screen (bypass post-processing for AMD compat)
+        # === DIAGNOSTIC: render test triangle + particles direct to screen ===
         self.ctx.fbo.use()
-        self.ctx.fbo.clear(0.0, 0.0, 0.02, 1.0)
-        self.ctx.enable(moderngl.DEPTH_TEST)
-        self.ctx.enable(moderngl.BLEND)
+        self.ctx.fbo.clear(0.02, 0.0, 0.05, 1.0)  # Very dark purple
+
+        # --- Test A: Simple colored triangle (no SSBO, no points) ---
+        if not hasattr(self, '_diag_prog'):
+            self._diag_prog = self.ctx.program(
+                vertex_shader="""
+                #version 430
+                const vec2 verts[3] = vec2[](
+                    vec2(-0.5, -0.5), vec2(0.5, -0.5), vec2(0.0, 0.5)
+                );
+                const vec3 colors[3] = vec3[](
+                    vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)
+                );
+                out vec3 v_color;
+                void main() {
+                    gl_Position = vec4(verts[gl_VertexID], 0.0, 1.0);
+                    v_color = colors[gl_VertexID];
+                }
+                """,
+                fragment_shader="""
+                #version 430
+                in vec3 v_color;
+                out vec4 fragColor;
+                void main() { fragColor = vec4(v_color, 1.0); }
+                """,
+            )
+            self._diag_vao = self.ctx.vertex_array(self._diag_prog, [])
+
+        self.ctx.disable(moderngl.DEPTH_TEST)
+        self._diag_vao.render(moderngl.TRIANGLES, vertices=3)
+
+        # --- Test B: Particles with big white points (simple shader) ---
+        if not hasattr(self, '_diag_pt_prog'):
+            self._diag_pt_prog = self.ctx.program(
+                vertex_shader="""
+                #version 430
+                struct P { vec4 pos; vec4 vel; vec4 col; };
+                layout(std430, binding = 0) readonly buffer Particles { P particles[]; };
+                uniform mat4 u_projection;
+                uniform mat4 u_view;
+                void main() {
+                    vec3 p = particles[gl_VertexID].pos.xyz;
+                    gl_Position = u_projection * u_view * vec4(p, 1.0);
+                    gl_PointSize = clamp(200.0 / max(gl_Position.w, 0.1), 2.0, 64.0);
+                }
+                """,
+                fragment_shader="""
+                #version 430
+                out vec4 fragColor;
+                void main() { fragColor = vec4(1.0, 0.8, 0.3, 1.0); }
+                """,
+            )
+
         self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)
-        self.ctx.blend_func = moderngl.ONE, moderngl.ONE  # Additive blending
-        self.ctx.depth_mask = False
+        self.ctx.enable(moderngl.BLEND)
+        self.ctx.blend_func = moderngl.ONE, moderngl.ONE
+        self.particles.get_render_buffer().bind_to_storage_buffer(0)
+        self._diag_pt_prog["u_projection"].write(proj_bytes)
+        self._diag_pt_prog["u_view"].write(view_bytes)
+        diag_vao = self.ctx.vertex_array(self._diag_pt_prog, [])
+        diag_vao.render(moderngl.POINTS, vertices=min(self.particles.count, 10000))
 
-        # Upload current era uniforms
-        prog = self.particles.get_active_program()
-        self._upload_uniforms_to_program(prog, config, state, physics_uniforms)
-
-        # Render particles directly to default framebuffer
-        self.particles.render(proj_bytes, view_bytes)
-
-        # Restore state
-        self.ctx.depth_mask = True
         self.ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
 
     # --- Input Handling ---

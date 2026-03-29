@@ -144,6 +144,10 @@ class HUDManager:
         self.show_education: bool = True
         self.show_milestones: bool = True
 
+        # Era transition state for smooth crossfading
+        self._prev_era: int = -1
+        self._transition_alpha: float = 1.0  # 0=old era, 1=new era
+
     def toggle(self) -> None:
         """Toggle the entire HUD on/off."""
         self.visible = not self.visible
@@ -156,6 +160,9 @@ class HUDManager:
         camera_auto: bool,
         eras: list[EraDefinition],
         recording: bool = False,
+        transition_blend: float = 0.0,
+        in_transition: bool = False,
+        outgoing_era: int = 0,
     ) -> None:
         """Render all HUD panels for the current frame.
 
@@ -169,45 +176,86 @@ class HUDManager:
             camera_auto: Whether the cinematic camera is in auto mode.
             eras: List of EraDefinition objects (the 11 eras).
             recording: Whether video recording is active.
+            transition_blend: Crossfade blend factor (0=outgoing, 1=incoming).
+            in_transition: Whether an era crossfade is active.
+            outgoing_era: Index of the outgoing era during transition.
         """
         if not self.visible:
             return
 
+        # Track era transitions for smooth crossfading
+        if in_transition:
+            self._transition_alpha = transition_blend
+            self._prev_era = outgoing_era
+        else:
+            self._transition_alpha = 1.0
+
         display_size = imgui.get_io().display_size
 
-        self._render_era_panel(state, eras, display_size)
+        self._render_era_panel(state, eras, display_size, in_transition)
 
         if self.show_physics:
             self._render_physics_panel(state, display_size)
 
         if self.show_education:
-            self._render_education_panel(state, display_size)
+            self._render_education_panel(state, eras, display_size, in_transition)
 
         if self.show_milestones:
             self._render_milestone_notifications(milestones, display_size)
 
         self._render_timeline_bar(state, sim, eras, display_size)
-        self._render_controls_hint(camera_auto, recording, display_size)
+        self._render_controls_hint(sim, camera_auto, recording, display_size)
 
     # ------------------------------------------------------------------
     # Panel methods
     # ------------------------------------------------------------------
 
-    def _render_era_panel(self, state, eras, display_size) -> None:
-        """Top-left: current era name and short description."""
+    def _render_era_panel(self, state, eras, display_size, in_transition: bool = False) -> None:
+        """Top-left: current era name and short description with crossfade."""
         imgui.set_next_window_pos(imgui.ImVec2(20, 20))
-        imgui.set_next_window_bg_alpha(0.6)
+        bg_alpha = 0.6
+        imgui.set_next_window_bg_alpha(bg_alpha)
         imgui.begin("Era Info", None, HUD_FLAGS)
 
-        era = eras[state.current_era] if 0 <= state.current_era < len(eras) else None
+        incoming_era = eras[state.current_era] if 0 <= state.current_era < len(eras) else None
+        alpha = self._transition_alpha
 
-        if era is not None:
+        if in_transition and 0 <= self._prev_era < len(eras):
+            outgoing_era = eras[self._prev_era]
+            out_alpha = 1.0 - alpha
+
+            # Outgoing era (fading out)
+            if out_alpha > 0.01:
+                imgui.push_style_color(imgui.Col_.text, imgui.ImVec4(1.0, 0.9, 0.7, out_alpha))
+                _push_scaled_font(1.5)
+                imgui.text(outgoing_era.name)
+                _pop_scaled_font()
+                imgui.pop_style_color()
+                imgui.push_style_color(imgui.Col_.text, imgui.ImVec4(0.9, 0.9, 0.9, out_alpha))
+                imgui.text(outgoing_era.description)
+                imgui.pop_style_color()
+
+            # Separator during crossfade
+            if 0.1 < alpha < 0.9:
+                imgui.separator()
+
+            # Incoming era (fading in)
+            if alpha > 0.01 and incoming_era is not None:
+                imgui.push_style_color(imgui.Col_.text, imgui.ImVec4(1.0, 0.9, 0.7, alpha))
+                _push_scaled_font(1.5)
+                imgui.text(incoming_era.name)
+                _pop_scaled_font()
+                imgui.pop_style_color()
+                imgui.push_style_color(imgui.Col_.text, imgui.ImVec4(0.9, 0.9, 0.9, alpha))
+                imgui.text(incoming_era.description)
+                imgui.pop_style_color()
+        elif incoming_era is not None:
             imgui.push_style_color(imgui.Col_.text, imgui.ImVec4(1.0, 0.9, 0.7, 1.0))
             _push_scaled_font(1.5)
-            imgui.text(era.name)
+            imgui.text(incoming_era.name)
             _pop_scaled_font()
             imgui.pop_style_color()
-            imgui.text(era.description)
+            imgui.text(incoming_era.description)
 
         imgui.end()
 
@@ -231,17 +279,36 @@ class HUDManager:
 
         imgui.end()
 
-    def _render_education_panel(self, state, display_size) -> None:
-        """Left side below era panel: rich era description text."""
+    def _render_education_panel(self, state, eras, display_size, in_transition: bool = False) -> None:
+        """Left side below era panel: rich era description text with crossfade."""
         imgui.set_next_window_pos(imgui.ImVec2(20, 120))
         imgui.set_next_window_bg_alpha(0.5)
         imgui.begin("Education", None, HUD_FLAGS)
 
         imgui.push_text_wrap_pos(350.0)
-        desc = ERA_DESCRIPTIONS.get(state.current_era, "")
-        imgui.text_wrapped(desc)
-        imgui.pop_text_wrap_pos()
+        alpha = self._transition_alpha
 
+        if in_transition and 0 <= self._prev_era < len(eras):
+            out_alpha = 1.0 - alpha
+            old_desc = ERA_DESCRIPTIONS.get(self._prev_era, "")
+            new_desc = ERA_DESCRIPTIONS.get(state.current_era, "")
+
+            if out_alpha > 0.01 and old_desc:
+                imgui.push_style_color(imgui.Col_.text, imgui.ImVec4(0.9, 0.9, 0.9, out_alpha))
+                imgui.text_wrapped(old_desc)
+                imgui.pop_style_color()
+
+            if alpha > 0.01 and new_desc and alpha > 0.1:
+                if out_alpha > 0.01:
+                    imgui.separator()
+                imgui.push_style_color(imgui.Col_.text, imgui.ImVec4(0.9, 0.9, 0.9, alpha))
+                imgui.text_wrapped(new_desc)
+                imgui.pop_style_color()
+        else:
+            desc = ERA_DESCRIPTIONS.get(state.current_era, "")
+            imgui.text_wrapped(desc)
+
+        imgui.pop_text_wrap_pos()
         imgui.end()
 
     def _render_milestone_notifications(self, milestones, display_size) -> None:
@@ -336,21 +403,42 @@ class HUDManager:
             2.0,
         )
 
-    def _render_controls_hint(self, camera_auto, recording, display_size) -> None:
-        """Bottom-right corner: keyboard controls hint."""
-        imgui.set_next_window_pos(imgui.ImVec2(display_size.x - 310, display_size.y - 85))
+    def _render_controls_hint(self, sim, camera_auto, recording, display_size) -> None:
+        """Bottom-right corner: keyboard controls hint with speed indicator."""
+        imgui.set_next_window_pos(imgui.ImVec2(display_size.x - 310, display_size.y - 100))
         imgui.set_next_window_bg_alpha(0.4)
         imgui.begin("Controls", None, HUD_FLAGS)
 
+        # Speed indicator
+        speed = sim.speed_multiplier
+        paused = sim.paused
+        if paused:
+            speed_color = imgui.ImVec4(1.0, 0.5, 0.2, 1.0)
+            speed_text = "PAUSED"
+        elif speed > 1.01:
+            speed_color = imgui.ImVec4(0.4, 1.0, 0.4, 1.0)
+            speed_text = f">> {speed:.1f}x"
+        elif speed < 0.99:
+            speed_color = imgui.ImVec4(0.4, 0.7, 1.0, 1.0)
+            speed_text = f"<< {speed:.1f}x"
+        else:
+            speed_color = imgui.ImVec4(0.9, 0.9, 0.9, 1.0)
+            speed_text = f"1.0x"
+        imgui.push_style_color(imgui.Col_.text, speed_color)
+        _push_scaled_font(1.2)
+        imgui.text(speed_text)
+        _pop_scaled_font()
+        imgui.pop_style_color()
+
         cam_mode = "Auto" if camera_auto else "Free"
-        rec_status = " [REC]" if recording else ""
         imgui.push_style_color(imgui.Col_.text, imgui.ImVec4(0.7, 0.7, 0.7, 1.0))
         imgui.text(f"H: HUD | C: Cam [{cam_mode}] | F12: Screenshot")
-        imgui.text(f"Space: Pause | +/-: Speed | F11: Fullscreen")
+        imgui.text(f"Space: Pause | Right/+: Fast | Left/-: Slow")
         imgui.pop_style_color()
         rec_color = imgui.ImVec4(1.0, 0.3, 0.3, 1.0) if recording else imgui.ImVec4(0.7, 0.7, 0.7, 1.0)
+        rec_status = " [REC]" if recording else ""
         imgui.push_style_color(imgui.Col_.text, rec_color)
-        imgui.text(f"F9: Record{rec_status}")
+        imgui.text(f"F9: Record{rec_status} | F11: Fullscreen")
         imgui.pop_style_color()
 
         imgui.end()

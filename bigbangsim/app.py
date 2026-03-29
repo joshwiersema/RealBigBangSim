@@ -517,6 +517,9 @@ class BigBangSimApp(moderngl_window.WindowConfig):
             state, self.sim, self.milestones,
             self.camera_controller.is_auto, ERAS,
             recording=recording,
+            transition_blend=self.transition.blend_factor,
+            in_transition=self.transition.in_transition,
+            outgoing_era=self.transition.outgoing_era,
         )
         imgui.render()
         self.imgui_renderer.render(imgui.get_draw_data())
@@ -644,9 +647,9 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         if action == keys.ACTION_PRESS:
             if key == keys.SPACE:
                 self.sim.toggle_pause()
-            elif key == keys.EQUAL:
+            elif key == keys.EQUAL or key == keys.RIGHT:
                 self.sim.increase_speed()
-            elif key == keys.MINUS:
+            elif key == keys.MINUS or key == keys.LEFT:
                 self.sim.decrease_speed()
             elif key == keys.H:
                 self.hud.toggle()

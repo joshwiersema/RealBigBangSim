@@ -119,6 +119,10 @@ class PostProcessingPipeline:
             target_fbo: Target framebuffer. If None, renders to ctx.fbo
                        (moderngl-window's default framebuffer).
         """
+        # Post-processing is 2D screen-space — disable depth test and blending
+        self.ctx.disable(moderngl.DEPTH_TEST)
+        self.ctx.disable(moderngl.BLEND)
+
         # Pass 1: Bright-pass extraction -> bloom FBO (half-res)
         self.bloom_fbo.use()
         self.bloom_fbo.clear(0.0, 0.0, 0.0, 0.0)

@@ -270,7 +270,8 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         )
 
         # GPU particle system (RNDR-01, expanded for 11 eras in Phase 3)
-        self.particles = ParticleSystem(self.ctx, count=200_000)
+        # 500K particles with 256 gravitational seeds for structure formation
+        self.particles = ParticleSystem(self.ctx, count=500_000, seed_count=256)
 
         # Post-processing pipeline (RNDR-02)
         self.postfx = PostProcessingPipeline(
@@ -410,6 +411,8 @@ class BigBangSimApp(moderngl_window.WindowConfig):
             compute['u_damping'].value = config.damping
         if 'u_containment_radius' in compute:
             compute['u_containment_radius'].value = config.containment_radius
+        if 'u_seed_count' in compute:
+            compute['u_seed_count'].value = self.particles.seed_count
 
     def on_render(self, time: float, frame_time: float):
         """Main render loop with per-era visuals, physics, transitions, and HUD."""
@@ -441,8 +444,12 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         # 7. Upload per-era compute uniforms BEFORE dispatch
         self._upload_compute_uniforms(config)
 
-        # 8. Update particle system via compute shader
-        self.particles.update(PHYSICS_DT, state)
+        # 8. Update particle system via compute shader (4x sub-stepping)
+        # Multiple dispatches per frame: higher accuracy + pushes GPU harder
+        _SUB_STEPS = 4
+        _sub_dt = PHYSICS_DT / _SUB_STEPS
+        for _ in range(_SUB_STEPS):
+            self.particles.update(_sub_dt, state, self.sim.screen_time)
 
         # 9. Switch to current era's shader
         self.particles.set_era_shader(state.current_era)

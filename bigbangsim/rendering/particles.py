@@ -14,9 +14,6 @@ Particle struct layout (matches common.glsl):
   vec4 velocity  -- xyz=velocity, w=type (float-encoded int)
   vec4 color     -- rgba
   Total: 3 * vec4 * 4 bytes = 48 bytes per particle
-
-Phase 3: Expanded to support 11 per-era fragment shaders (era_00_planck through
-era_10_lss) with per-era uniform uploads and shader-key-based rendering.
 """
 from __future__ import annotations
 
@@ -28,8 +25,11 @@ from bigbangsim.rendering.shader_loader import load_shader_source
 # 3 vec4 * 4 bytes = 48 bytes per particle (matches common.glsl Particle struct)
 PARTICLE_STRIDE = 48
 
-# Default particle count: 200K for a balance of visual density and performance
-DEFAULT_PARTICLE_COUNT = 200_000
+# 500K particles: pushes GPU with 4 sub-steps + 6-octave noise + 256 seed gravity
+DEFAULT_PARTICLE_COUNT = 500_000
+
+# Gravitational seed points for cosmic structure formation (eras 7-10)
+DEFAULT_SEED_COUNT = 256
 
 # 11 per-era fragment shaders matching EraVisualConfig.shader_key
 _ERA_SHADER_NAMES = [
@@ -55,12 +55,17 @@ class ParticleSystem:
     The vertex shader reads particle data from the current read buffer
     via gl_VertexID (no VAO vertex attributes needed for particle data).
 
-    Phase 3: Supports 11 per-era fragment shader programs with per-era
-    uniform uploads. Each era's visual config drives shader selection
-    and uniform values.
+    Includes a gravitational seed buffer (SSBO binding=2) for cosmic
+    structure formation in late-universe eras. Seeds are 256 points with
+    hierarchical clustering to produce realistic cosmic web topology.
     """
 
-    def __init__(self, ctx: moderngl.Context, count: int = DEFAULT_PARTICLE_COUNT):
+    def __init__(
+        self,
+        ctx: moderngl.Context,
+        count: int = DEFAULT_PARTICLE_COUNT,
+        seed_count: int = DEFAULT_SEED_COUNT,
+    ):
         self.ctx = ctx
         self.count = count
         self.current = 0  # Index of the "read" buffer (just updated)
@@ -73,6 +78,11 @@ class ParticleSystem:
             ctx.buffer(init_data.tobytes()),
             ctx.buffer(init_data.tobytes()),
         ]
+
+        # Gravitational seed buffer for structure formation
+        self.seed_count = seed_count
+        seed_data = self._generate_seeds(seed_count)
+        self.seed_buffer = ctx.buffer(seed_data.tobytes())
 
         # Compile compute shader (includes are preprocessed by shader_loader)
         compute_src = load_shader_source("compute/particle_update.comp")
@@ -106,6 +116,10 @@ class ParticleSystem:
     def _generate_initial_particles(count: int) -> np.ndarray:
         """Generate initial particle data as a flat float32 array.
 
+        Particles start as a singularity: tightly packed at the origin with
+        near-zero velocities. This represents the initial state of the
+        universe before the Planck epoch.
+
         Each particle: 12 floats (3 vec4s):
           [px, py, pz, life, vx, vy, vz, type, r, g, b, a]
 
@@ -114,36 +128,89 @@ class ParticleSystem:
         """
         rng = np.random.default_rng(42)
 
-        # Positions: Gaussian cloud centered at origin, sigma=2.0
-        positions = rng.normal(0, 2.0, (count, 3)).astype(np.float32)
-        life = np.ones((count, 1), dtype=np.float32)  # w = life = 1.0
+        # Positions: tight singularity centered at origin (σ = 0.05)
+        positions = rng.normal(0, 0.05, (count, 3)).astype(np.float32)
+        # Life: slight variation for visual texture
+        life = rng.uniform(0.7, 1.0, (count, 1)).astype(np.float32)
 
-        # Velocities: small random initial motion
-        velocities = rng.normal(0, 0.1, (count, 3)).astype(np.float32)
+        # Velocities: zero — singularity is static until physics activates
+        velocities = np.zeros((count, 3), dtype=np.float32)
         ptype = np.zeros((count, 1), dtype=np.float32)  # w = type = 0
 
-        # Colors: warm gradient (white-hot to orange)
-        r = rng.uniform(0.8, 1.0, (count, 1)).astype(np.float32)
-        g = rng.uniform(0.4, 0.8, (count, 1)).astype(np.float32)
-        b = rng.uniform(0.1, 0.4, (count, 1)).astype(np.float32)
+        # Colors: white-hot (fragment shaders override with per-era palettes)
+        r = rng.uniform(0.9, 1.0, (count, 1)).astype(np.float32)
+        g = rng.uniform(0.9, 1.0, (count, 1)).astype(np.float32)
+        b = rng.uniform(0.85, 1.0, (count, 1)).astype(np.float32)
         a = np.ones((count, 1), dtype=np.float32)
 
         # Pack: [pos.xyz, life, vel.xyz, type, rgba]
         data = np.hstack([positions, life, velocities, ptype, r, g, b, a])
         return data  # shape (count, 12), dtype float32
 
-    def update(self, dt: float, physics_state) -> None:
+    @staticmethod
+    def _generate_seeds(count: int) -> np.ndarray:
+        """Generate gravitational seed points for cosmic structure formation.
+
+        Seeds represent primordial density perturbations that grow via
+        gravitational instability into the cosmic web (galaxy clusters,
+        filaments, voids). Uses hierarchical clustering:
+
+        1. ~32 major cluster seeds (high mass, random positions)
+        2. ~3-7 satellite seeds per cluster (lower mass, nearby)
+        3. Remaining as field seeds (low mass, uniform distribution)
+
+        Seeds are in normalized [-1,1] space and will be scaled by
+        containment_radius in the compute shader.
+
+        Returns:
+            np.ndarray shape (count, 4): xyz=position, w=mass
+        """
+        rng = np.random.default_rng(137)  # Different seed from particles
+
+        positions: list[np.ndarray] = []
+        masses: list[float] = []
+
+        # Phase 1: Major cluster centers (~32 large halos)
+        n_clusters = 32
+        cluster_centers = rng.uniform(-0.7, 0.7, (n_clusters, 3)).astype(np.float32)
+        for center in cluster_centers:
+            positions.append(center)
+            masses.append(rng.uniform(0.5, 1.0))
+
+            # Satellite seeds around each cluster (galaxy groups)
+            n_satellites = rng.integers(3, 8)
+            for _ in range(n_satellites):
+                if len(positions) >= count:
+                    break
+                offset = rng.normal(0, 0.08, 3).astype(np.float32)
+                positions.append(center + offset)
+                masses.append(rng.uniform(0.1, 0.5))
+
+        # Phase 2: Fill remaining slots with field seeds (isolated galaxies)
+        while len(positions) < count:
+            pos = rng.uniform(-0.85, 0.85, 3).astype(np.float32)
+            positions.append(pos)
+            masses.append(rng.uniform(0.05, 0.3))
+
+        pos_array = np.array(positions[:count], dtype=np.float32)
+        mass_array = np.array(masses[:count], dtype=np.float32).reshape(-1, 1)
+
+        return np.hstack([pos_array, mass_array])
+
+    def update(self, dt: float, physics_state, sim_time: float = 0.0) -> None:
         """Dispatch compute shader to update all particles.
 
         Args:
-            dt: Simulation timestep in seconds.
+            dt: Simulation timestep in seconds (may be sub-stepped).
             physics_state: PhysicsState with temperature, scale_factor, current_era, etc.
+            sim_time: Accumulated screen time for noise animation seeding.
         """
         read_buf = self.buffers[self.current]
         write_buf = self.buffers[1 - self.current]
 
         read_buf.bind_to_storage_buffer(0)   # binding=0 readonly
         write_buf.bind_to_storage_buffer(1)  # binding=1 writeonly
+        self.seed_buffer.bind_to_storage_buffer(2)  # binding=2 readonly
 
         # Upload physics uniforms to compute shader (with guards for GLSL optimization)
         if 'u_dt' in self.compute:
@@ -158,6 +225,10 @@ class ParticleSystem:
             self.compute["u_era"].value = physics_state.current_era
         if 'u_era_progress' in self.compute:
             self.compute["u_era_progress"].value = physics_state.era_progress
+        if 'u_sim_time' in self.compute:
+            self.compute["u_sim_time"].value = sim_time
+        if 'u_seed_count' in self.compute:
+            self.compute["u_seed_count"].value = self.seed_count
 
         # Dispatch: ceiling division for workgroup count (local_size_x = 256)
         num_groups = (self.count + 255) // 256
@@ -298,6 +369,7 @@ class ParticleSystem:
         """Release GPU resources."""
         for buf in self.buffers:
             buf.release()
+        self.seed_buffer.release()
         # Track unique programs to avoid double-release (aliases share objects)
         released = set()
         for prog in self.programs.values():

@@ -52,106 +52,113 @@ class EraVisualConfig:
 
 
 ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
-    # Era 0: Planck Epoch
+    # ── Era 0: Planck Epoch ──────────────────────────────────────────
     # All forces unified; quantum gravity dominates. Pure white-hot energy.
-    # Compact singularity with intense bloom. Center is bright white,
-    # edges show subtle warm tones through ACES highlight compression.
+    # Tiny singularity with intense bloom. The compute shader confines
+    # particles to a tight ball via harmonic potential (no expansion).
+    # Containment = 1.5: the universe IS a point.
     EraVisualConfig(
         era_index=0,
         shader_key="era_00_planck",
         base_color=(1.0, 1.0, 1.0),
         accent_color=(1.0, 0.95, 0.8),
-        particle_size=0.8,
-        bloom_strength=0.5,
-        bloom_threshold=1.2,
-        expansion_rate=0.001,
-        noise_strength=0.5,
-        gravity_strength=0.0,
-        damping=0.02,
+        particle_size=0.6,
+        bloom_strength=0.6,
+        bloom_threshold=0.8,
+        expansion_rate=0.0,        # No expansion — singularity
+        noise_strength=0.0,        # Compute shader handles quantum foam directly
+        gravity_strength=0.0,      # No seeds active
+        damping=0.1,
         brightness=2.5,
         transition_seconds=2.0,
-        containment_radius=10.0,
-        exposure=0.1,
+        containment_radius=1.5,    # Tiny singularity
+        exposure=0.08,             # Very low — 500K particles in a point = insanely bright
     ),
-    # Era 1: Grand Unification
-    # Gravity separates; high-energy golden glow with violet symmetry breaking.
+    # ── Era 1: Grand Unification ─────────────────────────────────────
+    # Gravity separates; GUT forces still unified. Symmetry breaking
+    # creates energy bubbles. The singularity begins to expand.
+    # Containment grows from 1.5 → 3.0 as the universe stirs.
     EraVisualConfig(
         era_index=1,
         shader_key="era_01_gut",
         base_color=(1.0, 0.95, 0.7),
         accent_color=(0.7, 0.5, 0.9),
-        particle_size=0.8,
-        bloom_strength=0.35,
-        bloom_threshold=1.2,
-        expansion_rate=0.005,
-        noise_strength=0.35,
+        particle_size=0.7,
+        bloom_strength=0.5,
+        bloom_threshold=0.9,
+        expansion_rate=0.05,       # Gentle initial expansion
+        noise_strength=0.3,        # Symmetry breaking turbulence
         gravity_strength=0.0,
-        damping=0.02,
+        damping=0.08,
         brightness=2.2,
         transition_seconds=2.0,
-        containment_radius=12.0,
-        exposure=0.12,
+        containment_radius=3.0,    # Slightly larger than singularity
+        exposure=0.10,
     ),
-    # Era 2: Inflation
-    # Exponential expansion; bright yellow-white stretching outward dramatically.
-    # Particles rapidly expand outward — the universe inflates.
+    # ── Era 2: Inflation ─────────────────────────────────────────────
+    # Exponential expansion ~10^26 factor. THE most dramatic moment.
+    # Particles EXPLODE outward. Quantum fluctuations frozen into
+    # primordial density perturbations. Containment jumps to 40.
     EraVisualConfig(
         era_index=2,
         shader_key="era_02_inflation",
         base_color=(1.0, 0.95, 0.6),
         accent_color=(1.0, 1.0, 0.9),
-        particle_size=0.7,
-        bloom_strength=0.3,
-        bloom_threshold=1.0,
-        expansion_rate=0.8,
-        noise_strength=0.1,
+        particle_size=0.6,
+        bloom_strength=0.4,
+        bloom_threshold=0.9,
+        expansion_rate=2.0,        # MASSIVE expansion rate
+        noise_strength=0.1,        # Perturbation seeding
         gravity_strength=0.0,
-        damping=0.003,
+        damping=0.001,             # Almost no friction during inflation
         brightness=2.0,
         transition_seconds=1.5,
-        containment_radius=30.0,
-        exposure=0.18,
+        containment_radius=40.0,   # Universe inflates enormously
+        exposure=0.15,
     ),
-    # Era 3: Quark-Gluon Plasma
-    # Superhot plasma; deep orange-red with golden highlights, turbulent.
+    # ── Era 3: Quark-Gluon Plasma ────────────────────────────────────
+    # Superhot plasma; deep orange-red with golden highlights.
+    # Free quarks and gluons in thermal equilibrium. Intense turbulence.
     EraVisualConfig(
         era_index=3,
         shader_key="era_03_qgp",
         base_color=(1.0, 0.3, 0.05),
         accent_color=(1.0, 0.9, 0.5),
-        particle_size=1.0,
-        bloom_strength=0.3,
-        bloom_threshold=1.0,
-        expansion_rate=0.02,
-        noise_strength=0.5,
+        particle_size=0.9,
+        bloom_strength=0.35,
+        bloom_threshold=0.9,
+        expansion_rate=0.03,       # Slow Hubble expansion
+        noise_strength=1.0,        # Maximum turbulence — hot plasma
         gravity_strength=0.0,
-        damping=0.015,
+        damping=0.03,
         brightness=1.8,
         transition_seconds=2.0,
-        containment_radius=25.0,
-        exposure=0.25,
+        containment_radius=38.0,
+        exposure=0.22,
     ),
-    # Era 4: Hadron Epoch
-    # Quarks combine into nucleons; warm orange with amber highlights.
+    # ── Era 4: Hadron Epoch ──────────────────────────────────────────
+    # QCD phase transition: quarks confine into protons & neutrons.
+    # Universe cooling through the transition. Warm orange.
     EraVisualConfig(
         era_index=4,
         shader_key="era_04_hadron",
         base_color=(0.95, 0.5, 0.15),
         accent_color=(1.0, 0.8, 0.4),
         particle_size=1.0,
-        bloom_strength=0.25,
+        bloom_strength=0.3,
         bloom_threshold=1.0,
-        expansion_rate=0.015,
-        noise_strength=0.3,
+        expansion_rate=0.02,
+        noise_strength=0.5,        # Decreasing turbulence
         gravity_strength=0.0,
-        damping=0.02,
+        damping=0.04,
         brightness=1.5,
         transition_seconds=2.0,
-        containment_radius=30.0,
-        exposure=0.35,
+        containment_radius=42.0,
+        exposure=0.30,
     ),
-    # Era 5: Nucleosynthesis
-    # Light elements form; green-gold nuclear glow.
+    # ── Era 5: Nucleosynthesis ───────────────────────────────────────
+    # Light elements form (H, He, Li). Nuclear fusion over ~20 minutes.
+    # Green-gold nuclear glow. Gentle clustering begins.
     EraVisualConfig(
         era_index=5,
         shader_key="era_05_nucleosynthesis",
@@ -160,18 +167,18 @@ ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
         particle_size=1.0,
         bloom_strength=0.25,
         bloom_threshold=1.0,
-        expansion_rate=0.01,
-        noise_strength=0.25,
-        gravity_strength=0.0,
-        damping=0.02,
+        expansion_rate=0.015,
+        noise_strength=0.3,
+        gravity_strength=0.01,     # Gentle nuclear clustering
+        damping=0.04,
         brightness=1.3,
         transition_seconds=2.0,
-        containment_radius=35.0,
-        exposure=0.5,
+        containment_radius=48.0,
+        exposure=0.45,
     ),
-    # Era 6: Recombination / CMB
-    # Electrons bind to nuclei; warm orange fading to deep violet.
-    # The "last light" before the cosmic dark ages.
+    # ── Era 6: Recombination / CMB ───────────────────────────────────
+    # Electrons bind to nuclei; universe becomes transparent.
+    # Warm orange fading to deep violet. Dramatic cooling event.
     EraVisualConfig(
         era_index=6,
         shader_key="era_06_recombination",
@@ -180,19 +187,18 @@ ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
         particle_size=1.0,
         bloom_strength=0.2,
         bloom_threshold=1.0,
-        expansion_rate=0.008,
+        expansion_rate=0.01,
         noise_strength=0.1,
-        gravity_strength=0.0,
-        damping=0.025,
+        gravity_strength=0.005,
+        damping=0.06,              # Strong damping as thermal coupling breaks
         brightness=1.0,
         transition_seconds=3.0,
-        containment_radius=40.0,
-        exposure=0.7,
+        containment_radius=55.0,
+        exposure=0.65,
     ),
-    # Era 7: Dark Ages
+    # ── Era 7: Dark Ages ─────────────────────────────────────────────
     # No stars; deep dark blue-black void. Dramatic contrast after CMB.
-    # Almost invisible — the universe goes dark. Higher exposure to keep
-    # the faintest particles barely perceptible.
+    # Gravity slowly amplifies density perturbations. Seeds activate.
     EraVisualConfig(
         era_index=7,
         shader_key="era_07_dark_ages",
@@ -202,70 +208,74 @@ ERA_VISUAL_CONFIGS: list[EraVisualConfig] = [
         bloom_strength=0.05,
         bloom_threshold=2.0,
         expansion_rate=0.005,
-        noise_strength=0.03,
-        gravity_strength=0.002,
-        damping=0.03,
+        noise_strength=0.02,
+        gravity_strength=0.06,     # Seeds begin attracting — perturbation growth
+        damping=0.02,
         brightness=0.12,
         transition_seconds=3.0,
-        containment_radius=50.0,
+        containment_radius=60.0,
         exposure=3.0,
     ),
-    # Era 8: First Stars / Reionization
-    # First massive stars ignite; dark backdrop with brilliant blue-white points.
-    # Maximum drama: the universe lights up again after total darkness.
+    # ── Era 8: First Stars / Reionization ────────────────────────────
+    # Population III stars ignite. Dark backdrop with brilliant blue-white
+    # points. Maximum drama: the universe lights up after total darkness.
+    # Strong gravitational collapse toward seed points.
     EraVisualConfig(
         era_index=8,
         shader_key="era_08_first_stars",
         base_color=(0.03, 0.05, 0.15),
         accent_color=(0.8, 0.9, 1.0),
         particle_size=1.4,
-        bloom_strength=0.45,
-        bloom_threshold=0.8,
+        bloom_strength=0.5,
+        bloom_threshold=0.7,
         expansion_rate=0.004,
         noise_strength=0.05,
-        gravity_strength=0.008,
-        damping=0.02,
+        gravity_strength=0.18,     # Strong collapse — Jeans instability
+        damping=0.015,
         brightness=1.0,
         transition_seconds=2.5,
-        containment_radius=55.0,
+        containment_radius=65.0,
         exposure=1.5,
     ),
-    # Era 9: Galaxy Formation
-    # Gravity assembles galaxies; deep violet nebulae with blue-white clusters.
+    # ── Era 9: Galaxy Formation ──────────────────────────────────────
+    # Gravity assembles galaxies; deep violet nebulae with blue-white
+    # clusters. Filamentary structures between seed points.
+    # Rotational dynamics create spiral-like motion.
     EraVisualConfig(
         era_index=9,
         shader_key="era_09_galaxy_formation",
         base_color=(0.15, 0.05, 0.3),
         accent_color=(0.5, 0.6, 1.0),
         particle_size=1.2,
-        bloom_strength=0.35,
+        bloom_strength=0.4,
         bloom_threshold=0.8,
         expansion_rate=0.003,
-        noise_strength=0.04,
-        gravity_strength=0.025,
+        noise_strength=0.03,
+        gravity_strength=0.22,     # Maximum gravitational clustering
         damping=0.012,
         brightness=0.9,
         transition_seconds=2.0,
-        containment_radius=65.0,
+        containment_radius=75.0,
         exposure=1.5,
     ),
-    # Era 10: Large-Scale Structure
+    # ── Era 10: Large-Scale Structure ────────────────────────────────
     # Cosmic web matures; dark indigo with warm golden filaments.
+    # Dark energy begins to accelerate expansion. Structure frozen in.
     EraVisualConfig(
         era_index=10,
         shader_key="era_10_lss",
         base_color=(0.08, 0.05, 0.2),
         accent_color=(0.9, 0.75, 0.5),
         particle_size=1.1,
-        bloom_strength=0.3,
+        bloom_strength=0.35,
         bloom_threshold=0.9,
-        expansion_rate=0.002,
+        expansion_rate=0.003,
         noise_strength=0.02,
-        gravity_strength=0.02,
+        gravity_strength=0.18,     # Structure mostly frozen, slight continued growth
         damping=0.012,
         brightness=0.8,
         transition_seconds=2.0,
-        containment_radius=80.0,
+        containment_radius=90.0,
         exposure=1.5,
     ),
 ]

@@ -4,78 +4,402 @@ layout(local_size_x = 256) in;
 #include "common.glsl"
 #include "noise.glsl"
 
-layout(std430, binding = 0) readonly buffer ParticlesIn {
-    Particle particles_in[];
-};
-layout(std430, binding = 1) writeonly buffer ParticlesOut {
-    Particle particles_out[];
-};
+// -- Particle double-buffer (ping-pong) --
+layout(std430, binding = 0) readonly  buffer ParticlesIn  { Particle particles_in[];  };
+layout(std430, binding = 1) writeonly buffer ParticlesOut { Particle particles_out[]; };
 
-// Simple hash for pseudo-random respawn (deterministic per particle index)
+// -- Gravitational seed points for cosmic structure formation --
+// xyz = position in normalized [-1,1] space (scaled by containment_radius)
+// w   = relative mass (0.0-1.0)
+layout(std430, binding = 2) readonly  buffer GravSeeds    { vec4 grav_seeds[];        };
+
+// ========================================================================
+// Utility functions
+// ========================================================================
+
+// Deterministic per-particle hash -> vec3 in [-1, 1]
 vec3 hash3(uint seed) {
     uvec3 s = uvec3(seed, seed * 2654435761u, seed * 2246822519u);
     s ^= s >> 16u;
     s *= uvec3(0x45d9f3bu, 0x119de1f3u, 0x16a6b885u);
     s ^= s >> 16u;
-    return vec3(s) / float(0xFFFFFFFFu) * 2.0 - 1.0;  // [-1, 1]
+    return vec3(s) / float(0xFFFFFFFFu) * 2.0 - 1.0;
 }
 
+// Deterministic per-particle hash -> float in [0, 1]
+float hash1(uint seed) {
+    seed ^= (seed >> 16u);
+    seed *= 0x45d9f3bu;
+    seed ^= (seed >> 16u);
+    return float(seed) / float(0xFFFFFFFFu);
+}
+
+// -- 6-octave fractal Brownian motion (turbulence) --
+// Expensive: 3 * octaves snoise3 calls. Drives GPU load.
+vec3 fbm3(vec3 p, float t, int octaves) {
+    vec3 result = vec3(0.0);
+    float amp = 1.0;
+    float freq = 1.0;
+    float total = 0.0;
+    for (int i = 0; i < octaves; i++) {
+        vec3 sp = p * freq;
+        result += amp * vec3(
+            snoise3(sp + vec3(t,   0.0, 0.0)),
+            snoise3(sp + vec3(0.0, t,   0.0)),
+            snoise3(sp + vec3(0.0, 0.0, t  ))
+        );
+        total += amp;
+        amp   *= 0.5;
+        freq  *= 2.0;
+    }
+    return result / total;
+}
+
+// -- N-body gravity from seed points --
+// Computes total gravitational acceleration from all seeds.
+// Softening parameter prevents singularities at small separations.
+vec3 seed_gravity(vec3 pos) {
+    vec3 force = vec3(0.0);
+    for (uint i = 0u; i < u_seed_count; i++) {
+        vec3 seed_pos = grav_seeds[i].xyz * u_containment_radius;
+        float seed_mass = grav_seeds[i].w;
+        vec3 diff = seed_pos - pos;
+        float r2 = dot(diff, diff) + 0.5;           // softening eps^2 = 0.5
+        force += seed_mass * diff / (r2 * sqrt(r2)); // ~ 1/r^2
+    }
+    return force;
+}
+
+// ========================================================================
+// Main compute kernel -- one invocation per particle
+// ========================================================================
 void main() {
     uint idx = gl_GlobalInvocationID.x;
     if (idx >= u_particle_count) return;
 
     Particle p = particles_in[idx];
-    vec3 pos = p.position.xyz;
-    vec3 vel = p.velocity.xyz;
+    vec3  pos  = p.position.xyz;
+    vec3  vel  = p.velocity.xyz;
     float life = p.position.w;
 
-    // Per-era expansion (Hubble-like flow)
-    vel += pos * u_expansion_rate * u_dt;
+    // Per-particle deterministic randomness (stable across frames)
+    vec3  rnd  = hash3(idx);
+    float rnd1 = hash1(idx * 3u + 7u);
 
-    // Per-era turbulence via 3D simplex noise
-    if (u_noise_strength > 0.001) {
-        vec3 noise_sample = vec3(
-            snoise3(pos * 0.5 + vec3(u_era_progress * 1.5, 0.0, 0.0)),
-            snoise3(pos * 0.5 + vec3(0.0, u_era_progress * 1.5, 0.0)),
-            snoise3(pos * 0.5 + vec3(0.0, 0.0, u_era_progress * 1.5))
-        );
-        vel += noise_sample * u_noise_strength * u_dt;
+    // Temperature-scaled thermal speed: log(T)/log(T_planck) in [0,1]
+    // T_planck ~ 1.4e32 K -> ln(T_planck) ~ 74
+    float thermal = clamp(log(max(u_temperature, 1.0)) / 74.0, 0.0, 1.0);
+
+    // ====================================================================
+    //  ERA-SPECIFIC PHYSICS
+    //  Each era implements the dominant physical processes of that epoch.
+    //  References: Weinberg "Cosmology" (2008), Kolb & Turner (1990)
+    // ====================================================================
+
+    if (u_era == 0) {
+        // -- ERA 0: PLANCK EPOCH (t < 1e-36 s, T ~ 1e32 K) --
+        // All four forces unified. Quantum gravity dominates.
+        // The universe is a point-like singularity with Planck-scale
+        // quantum foam fluctuations. No meaningful expansion.
+        //
+        // Model: Pure vibration confined to tiny radius. Velocity is
+        // directly set (not accumulated) to represent quantum foam
+        // where classical trajectories have no meaning.
+
+        vec3 quantum_foam = fbm3(pos * 20.0 + rnd * 2.0, u_sim_time * 8.0, 6);
+        vel = quantum_foam * thermal * 3.0;
+
+        // Singularity confinement: strong harmonic pull to origin
+        vel -= pos * 5.0;
+    }
+    else if (u_era == 1) {
+        // -- ERA 1: GRAND UNIFICATION (1e-36 - 1e-12 s, T ~ 1e28 K) --
+        // Gravity separates from the GUT force. Spontaneous symmetry
+        // breaking releases energy in phase-transition "bubbles."
+        // The singularity begins to expand.
+        //
+        // Model: Intense turbulence + occasional energy kicks from
+        // symmetry breaking. Central confinement weakens with progress.
+
+        vec3 noise = fbm3(pos * 10.0, u_sim_time * 5.0, 6);
+        vel += noise * thermal * 2.0 * u_dt;
+
+        // Expansion ramps up with era progress
+        vel += pos * u_expansion_rate * u_era_progress * u_dt;
+
+        // Symmetry-breaking energy kicks (stochastic per particle)
+        float kick_phase = fract(u_sim_time * 3.0 + rnd1);
+        if (kick_phase < 0.05) {
+            vel += hash3(idx + uint(u_sim_time * 100.0)) * thermal * 0.8;
+        }
+
+        // Central attraction weakens as forces separate
+        float confinement = 3.0 - 2.5 * u_era_progress;
+        vel -= pos * confinement * u_dt;
+
+        vel *= (1.0 - u_damping * u_dt);
+    }
+    else if (u_era == 2) {
+        // -- ERA 2: COSMIC INFLATION (1e-36 - 1e-32 s) --
+        // False vacuum drives exponential expansion by factor ~1e26.
+        // The most dramatic event in cosmic history.
+        //
+        // Quantum fluctuations are stretched to macroscopic scales,
+        // seeding the primordial density perturbations that will
+        // become galaxies billions of years later.
+        //
+        // Model: Hubble flow v proportional to r with exponentially
+        // increasing rate. Frozen-in density perturbations from noise.
+
+        // Inflation rate accelerates exponentially with progress
+        float inf_rate = u_expansion_rate * (1.0 + u_era_progress * 8.0);
+        vel += pos * inf_rate * u_dt;
+
+        // Primordial density perturbations (quantum -> classical)
+        // These are "frozen in" -- sampled at fixed position, not animated
+        vec3 perturbation = fbm3(pos * 0.3, 0.0, 4) * 0.15 * u_dt;
+        vel += perturbation;
+
+        // Minimal damping during exponential expansion
+        vel *= (1.0 - 0.001 * u_dt);
+    }
+    else if (u_era == 3) {
+        // -- ERA 3: QUARK-GLUON PLASMA (1e-12 - 1e-6 s, T > 1e12 K) --
+        // Free quarks and gluons in thermal equilibrium. The universe
+        // is a superhot, ultra-dense relativistic fluid.
+        //
+        // Model: Strong 6-octave turbulence + thermal jitter to
+        // simulate relativistic particle collisions. Slow Hubble
+        // expansion continues underneath.
+
+        vec3 turbulence = fbm3(pos * 3.0, u_sim_time * 6.0, 6);
+        vel += turbulence * u_noise_strength * 2.0 * u_dt;
+
+        // Thermal jitter: high-frequency random component
+        vec3 jitter = hash3(idx + uint(u_sim_time * 1000.0));
+        vel += jitter * thermal * 0.4 * u_dt;
+
+        // Hubble expansion
+        vel += pos * u_expansion_rate * u_dt;
+
+        vel *= (1.0 - u_damping * u_dt);
+    }
+    else if (u_era == 4) {
+        // -- ERA 4: HADRON EPOCH (1e-6 - 1 s, T ~ 1e12 -> 1e10 K) --
+        // QCD phase transition: quarks confine into protons & neutrons
+        // at T ~ 1.5e12 K. Universe cooling rapidly.
+        //
+        // Model: Turbulence and thermal motion decrease with progress
+        // as the universe cools through the QCD transition.
+
+        vec3 noise = fbm3(pos * 2.0, u_sim_time * 3.0, 5);
+        vel += noise * u_noise_strength * u_dt;
+
+        // Cooling: thermal contribution decreases through the era
+        float cooling = 1.0 - 0.5 * u_era_progress;
+        vec3 thermal_kick = hash3(idx + uint(u_sim_time * 500.0));
+        vel += thermal_kick * thermal * 0.3 * cooling * u_dt;
+
+        vel += pos * u_expansion_rate * u_dt;
+        vel *= (1.0 - u_damping * u_dt);
+    }
+    else if (u_era == 5) {
+        // -- ERA 5: NUCLEOSYNTHESIS (1 - 1200 s, T ~ 1e9 -> 3e8 K) --
+        // Big Bang Nucleosynthesis: protons + neutrons fuse into
+        // light elements (75% H, 25% He-4, traces of D, He-3, Li-7).
+        // Lasts about 20 minutes of cosmic time.
+        //
+        // Model: Moderate turbulence, gentle nuclear clustering
+        // via seed attraction. Continued expansion and cooling.
+
+        vec3 noise = fbm3(pos * 1.0, u_sim_time * 1.5, 4);
+        vel += noise * u_noise_strength * 0.5 * u_dt;
+
+        // Nuclear clustering: gentle attraction toward density peaks
+        if (u_seed_count > 0u && u_gravity_strength > 0.001) {
+            vec3 grav = seed_gravity(pos);
+            vel += grav * u_gravity_strength * u_dt;
+        }
+
+        vel += pos * u_expansion_rate * u_dt;
+        vel *= (1.0 - u_damping * u_dt);
+    }
+    else if (u_era == 6) {
+        // -- ERA 6: RECOMBINATION / CMB (1200 s -> 1.2e13 s) --
+        // At T ~ 3000 K, electrons bind to nuclei. Photons decouple
+        // and stream freely -> the Cosmic Microwave Background.
+        // The universe transitions from opaque plasma to transparent gas.
+        //
+        // Model: Thermal motion drops dramatically with progress.
+        // Expansion dominates. The "freezing out" of photon-baryon
+        // coupling creates a dramatic visual cooling effect.
+
+        float cooling = 1.0 - u_era_progress;
+        vec3 noise = fbm3(pos * 0.3, u_sim_time * 0.3, 3);
+        vel += noise * u_noise_strength * cooling * u_dt;
+
+        // Expansion dominates dynamics
+        vel += pos * u_expansion_rate * u_dt;
+
+        // Strong damping as thermal coupling breaks down
+        vel *= (1.0 - u_damping * (1.0 + u_era_progress * 2.0) * u_dt);
+    }
+    else if (u_era == 7) {
+        // -- ERA 7: DARK AGES (1.2e13 -> 6.3e15 s) --
+        // No stars exist. The universe is filled with neutral hydrogen.
+        // Gravity slowly amplifies primordial density perturbations.
+        // delta_rho/rho grows proportional to a(t) in matter domination.
+        //
+        // Model: Nearly static. Very slow expansion. Seed gravity
+        // grows quadratically with progress (perturbation growth).
+
+        // Minimal thermal noise -- the cosmos is cold and quiet
+        vec3 drift = fbm3(pos * 0.2, u_sim_time * 0.1, 2);
+        vel += drift * 0.01 * u_dt;
+
+        // Slow Hubble expansion
+        vel += pos * u_expansion_rate * u_dt;
+
+        // Gravitational instability: perturbations grow with time
+        // delta proportional to a(t) -> quadratic in era_progress
+        if (u_seed_count > 0u && u_gravity_strength > 0.001) {
+            float growth = u_era_progress * u_era_progress;
+            vec3 grav = seed_gravity(pos);
+            vel += grav * u_gravity_strength * growth * u_dt;
+        }
+
+        vel *= (1.0 - u_damping * u_dt);
+    }
+    else if (u_era == 8) {
+        // -- ERA 8: FIRST STARS / REIONIZATION (200 - 400 Myr) --
+        // Population III stars ignite: massive (~100 Msun), hot, short-lived.
+        // UV radiation reionizes the intergalactic medium.
+        // Jeans instability triggers gravitational collapse of gas clouds.
+        //
+        // Model: Strong gravitational collapse toward seeds.
+        // Stellar feedback (turbulence) near collapsed regions.
+
+        vel += pos * u_expansion_rate * u_dt;
+
+        // Gravitational collapse toward seeds (Jeans instability)
+        if (u_seed_count > 0u && u_gravity_strength > 0.001) {
+            vec3 grav = seed_gravity(pos);
+            vel += grav * u_gravity_strength * u_dt;
+
+            // Stellar feedback: turbulence near seed sites
+            float min_r = 1e10;
+            for (uint i = 0u; i < u_seed_count; i++) {
+                vec3 sp = grav_seeds[i].xyz * u_containment_radius;
+                min_r = min(min_r, length(sp - pos));
+            }
+            if (min_r < 3.0) {
+                vec3 fb = fbm3(pos * 2.0, u_sim_time * 3.0, 3);
+                vel += fb * 0.08 * (1.0 - min_r / 3.0) * u_dt;
+            }
+        }
+
+        vel *= (1.0 - u_damping * u_dt);
+    }
+    else if (u_era == 9) {
+        // -- ERA 9: GALAXY FORMATION (400 Myr - 2 Gyr) --
+        // Gravity assembles galaxies from collapsed gas clouds.
+        // Hierarchical merging builds larger structures.
+        // Baryons fall into dark matter potential wells and form
+        // rotationally-supported disks.
+        //
+        // Model: Strong seed gravity + tangential (orbital) velocity
+        // near seeds to create spiral-like rotational dynamics.
+
+        vel += pos * u_expansion_rate * u_dt;
+
+        if (u_seed_count > 0u && u_gravity_strength > 0.001) {
+            vec3 grav = seed_gravity(pos);
+            vel += grav * u_gravity_strength * u_dt;
+
+            // Rotational dynamics near nearest seed (disk formation)
+            float min_r2 = 1e10;
+            vec3 nearest_diff = vec3(0.0);
+            for (uint i = 0u; i < u_seed_count; i++) {
+                vec3 diff = grav_seeds[i].xyz * u_containment_radius - pos;
+                float r2 = dot(diff, diff);
+                if (r2 < min_r2) {
+                    min_r2 = r2;
+                    nearest_diff = diff;
+                }
+            }
+            float nr = sqrt(min_r2);
+            if (nr > 0.1 && nr < 12.0) {
+                // Tangential velocity ~ 1/sqrt(r) (Keplerian approximation)
+                vec3 tangent = normalize(cross(nearest_diff, vec3(0.0, 1.0, 0.0)));
+                float orbit_speed = 0.04 * inversesqrt(max(nr, 0.5));
+                vel += tangent * orbit_speed * u_dt;
+            }
+        }
+
+        vel *= (1.0 - u_damping * u_dt);
+    }
+    else {
+        // -- ERA 10: LARGE-SCALE STRUCTURE (2 - 13.8 Gyr) --
+        // The cosmic web matures: galaxy clusters connected by
+        // filaments, separated by enormous voids.
+        // Dark energy begins accelerating expansion at ~9.8 Gyr.
+        //
+        // Model: Seed gravity + accelerating expansion (dark energy).
+        // Slow cosmic drift. Structure is largely frozen in.
+
+        // Dark energy: expansion accelerates with progress
+        vel += pos * u_expansion_rate * (1.0 + u_era_progress * 0.5) * u_dt;
+
+        if (u_seed_count > 0u && u_gravity_strength > 0.001) {
+            vec3 grav = seed_gravity(pos);
+            vel += grav * u_gravity_strength * u_dt;
+        }
+
+        // Slow cosmic drift
+        vec3 drift = fbm3(pos * 0.1, u_sim_time * 0.05, 2);
+        vel += drift * 0.005 * u_dt;
+
+        vel *= (1.0 - u_damping * u_dt);
     }
 
-    // Per-era gravitational clustering (late eras)
-    if (u_gravity_strength > 0.001) {
-        float r = max(length(pos), 0.1);
-        vel += -normalize(pos) * u_gravity_strength * u_dt / r;
-    }
-
-    // Per-era damping
-    vel *= (1.0 - u_damping * u_dt);
-
-    // Integrate position
+    // ====================================================================
+    //  POSITION INTEGRATION
+    // ====================================================================
     pos += vel * u_dt;
 
-    // Containment: respawn particles that drift beyond the containment radius.
-    // Uses a soft boundary -- particles beyond 80% of the radius get pulled back,
-    // and particles beyond 100% are teleported to a random position near origin.
-    float radius = max(u_containment_radius, 1.0);
+    // ====================================================================
+    //  CONTAINMENT / RESPAWN
+    //  Particles beyond the containment radius are respawned to keep
+    //  the simulation visible. Soft boundary at 85% provides gentle
+    //  pull-back before hard respawn at 100%.
+    // ====================================================================
+    float radius = max(u_containment_radius, 0.5);
     float dist = length(pos);
+
     if (dist > radius) {
-        // Respawn: hash-based pseudo-random position within inner 40% of radius
-        vec3 rnd = hash3(idx + uint(u_era_progress * 1000.0));
-        float rnd_len = max(length(rnd), 0.001);
-        pos = (rnd / rnd_len) * (0.4 * radius * (0.2 + 0.8 * abs(rnd.x)));
-        vel = rnd * 0.1;  // Small random velocity
-        life = 1.0;       // Reset life
-    } else if (dist > radius * 0.8) {
-        // Soft pull-back: gentle inward force near boundary
-        float excess = (dist - radius * 0.8) / (radius * 0.2);
-        vel -= normalize(pos) * excess * 2.0 * u_dt;
+        // Hard respawn: place within inner 40% of radius
+        vec3 rnd_pos = hash3(idx + uint(u_sim_time * 100.0));
+        float rnd_len = max(length(rnd_pos), 0.001);
+        pos = (rnd_pos / rnd_len) * (0.4 * radius * (0.2 + 0.8 * abs(rnd_pos.x)));
+        vel = rnd_pos * 0.02;
+        life = 1.0;
+    } else if (dist > radius * 0.85) {
+        // Soft pull-back near boundary
+        float excess = (dist - radius * 0.85) / (radius * 0.15);
+        vel -= normalize(pos) * excess * 1.5 * u_dt;
     }
 
-    // Age particle
-    life = clamp(life - 0.001 * u_dt, 0.0, 1.0);
+    // ====================================================================
+    //  LIFE / AGING
+    //  Very slow decay for visual variety. Clamped to 0.05 so particles
+    //  never fully disappear. Resets to 1.0 on respawn.
+    // ====================================================================
+    life = clamp(life - 0.0003 * u_dt, 0.05, 1.0);
 
+    // ====================================================================
+    //  OUTPUT
+    // ====================================================================
     particles_out[idx].position = vec4(pos, life);
     particles_out[idx].velocity = vec4(vel, p.velocity.w);
-    particles_out[idx].color = p.color;
+    particles_out[idx].color    = p.color;
 }

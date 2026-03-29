@@ -18,6 +18,12 @@ uniform float u_damping;
 // are respawned nearby to keep the cloud visible across all eras.
 uniform float u_containment_radius;
 
+// Accumulated screen time for noise animation and time-varying effects
+uniform float u_sim_time;
+
+// Number of gravitational seed points for structure formation (eras 7-10)
+uniform uint u_seed_count;
+
 // Particle struct matching SSBO layout (all vec4 for std430 alignment safety)
 struct Particle {
     vec4 position;  // xyz = position, w = life (0.0-1.0)

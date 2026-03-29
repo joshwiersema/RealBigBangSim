@@ -477,6 +477,7 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         self.transition.begin_outgoing()
         self.ctx.enable(moderngl.DEPTH_TEST)
         self.ctx.enable(moderngl.BLEND)
+        self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)  # Re-enable (imgui's enable_only wipes it)
         self.ctx.blend_func = moderngl.ONE, moderngl.ONE
         self.ctx.depth_mask = False
 
@@ -537,6 +538,7 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         self.postfx.begin_scene()
         self.ctx.enable(moderngl.DEPTH_TEST)
         self.ctx.enable(moderngl.BLEND)
+        self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)  # Re-enable (imgui's enable_only wipes it)
         self.ctx.blend_func = moderngl.ONE, moderngl.ONE  # Additive blending
         self.ctx.depth_mask = False  # Don't write depth for particles (Pitfall 6)
 

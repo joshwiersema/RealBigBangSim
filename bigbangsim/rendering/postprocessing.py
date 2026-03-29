@@ -19,8 +19,8 @@ Usage:
 """
 from __future__ import annotations
 
+import numpy as np
 import moderngl
-from moderngl_window import geometry
 
 from bigbangsim.rendering.shader_loader import load_shader_source
 
@@ -43,8 +43,17 @@ class PostProcessingPipeline:
         self.bloom_threshold = 1.0
         self.blur_iterations = 6  # 3 horizontal + 3 vertical passes
 
-        # Fullscreen quad for post-processing passes
-        self.quad = geometry.quad_fs()
+        # Fullscreen quad — built with raw moderngl instead of
+        # geometry.quad_fs() which has issues on some AMD drivers.
+        quad_data = np.array([
+            # x,    y,   z,   u,   v
+            -1.0, -1.0, 0.0, 0.0, 0.0,
+             1.0, -1.0, 0.0, 1.0, 0.0,
+            -1.0,  1.0, 0.0, 0.0, 1.0,
+             1.0,  1.0, 0.0, 1.0, 1.0,
+        ], dtype="f4")
+        self._quad_buf = ctx.buffer(quad_data.tobytes())
+        self._quad_vaos: dict[int, moderngl.VertexArray] = {}
 
         # --- HDR scene FBO (full resolution, RGBA16F) ---
         self.hdr_texture = ctx.texture((width, height), 4, dtype="f2")
@@ -88,10 +97,20 @@ class PostProcessingPipeline:
             fragment_shader=load_shader_source("postprocess/tonemap.frag"),
         )
 
+    def _render_quad(self, prog: moderngl.Program) -> None:
+        """Render fullscreen quad with the given program."""
+        key = prog.glo
+        if key not in self._quad_vaos:
+            self._quad_vaos[key] = self.ctx.vertex_array(
+                prog,
+                [(self._quad_buf, "3f 2f", "in_position", "in_texcoord_0")],
+            )
+        self._quad_vaos[key].render(moderngl.TRIANGLE_STRIP)
+
     def begin_scene(self) -> None:
         """Bind the HDR FBO for scene rendering. Call before rendering particles."""
         self.hdr_fbo.use()
-        self.hdr_fbo.clear(0.0, 0.0, 0.05, 1.0)  # Dim blue — diagnostic: proves postfx works
+        self.hdr_fbo.clear(0.0, 0.0, 0.0, 0.0)
 
     def end_scene(self, target_fbo=None) -> None:
         """Run the bloom + tone mapping chain, output to target_fbo or screen.
@@ -106,7 +125,7 @@ class PostProcessingPipeline:
         self.hdr_texture.use(location=0)
         self.bright_prog["u_scene"].value = 0
         self.bright_prog["u_threshold"].value = self.bloom_threshold
-        self.quad.render(self.bright_prog)
+        self._render_quad(self.bright_prog)
 
         # Pass 2-3: Gaussian blur iterations (ping-pong between blur FBOs)
         horizontal = True
@@ -125,7 +144,7 @@ class PostProcessingPipeline:
 
             self.blur_prog["u_image"].value = 0
             self.blur_prog["u_horizontal"].value = horizontal
-            self.quad.render(self.blur_prog)
+            self._render_quad(self.blur_prog)
 
             horizontal = not horizontal
 
@@ -144,7 +163,7 @@ class PostProcessingPipeline:
         self.tonemap_prog["u_bloom"].value = 1
         self.tonemap_prog["u_exposure"].value = self.exposure
         self.tonemap_prog["u_bloom_strength"].value = self.bloom_strength
-        self.quad.render(self.tonemap_prog)
+        self._render_quad(self.tonemap_prog)
 
     def resize(self, width: int, height: int) -> None:
         """Recreate FBOs for new window dimensions. Call on window resize.

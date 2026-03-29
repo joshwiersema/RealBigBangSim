@@ -22,14 +22,13 @@ def _make_mock_pipeline(width=1280, height=720):
     mock_ctx.depth_renderbuffer.return_value = MagicMock()
     mock_ctx.framebuffer.return_value = MagicMock()
     mock_ctx.program.return_value = MagicMock()
+    mock_ctx.buffer.return_value = MagicMock()
+    mock_ctx.vertex_array.return_value = MagicMock()
 
     with patch(
         "bigbangsim.rendering.postprocessing.load_shader_source",
         return_value="#version 430\nvoid main() {}",
-    ), patch(
-        "bigbangsim.rendering.postprocessing.geometry"
-    ) as mock_geom:
-        mock_geom.quad_fs.return_value = MagicMock()
+    ):
         pp = PostProcessingPipeline(mock_ctx, width, height)
 
     return pp, mock_ctx

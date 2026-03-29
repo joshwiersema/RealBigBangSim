@@ -535,26 +535,25 @@ class BigBangSimApp(moderngl_window.WindowConfig):
             proj_bytes: Projection matrix as bytes.
             view_bytes: View matrix as bytes.
         """
-        self.postfx.begin_scene()
+        # Render directly to screen (bypass post-processing for AMD compat)
+        self.ctx.fbo.use()
+        self.ctx.fbo.clear(0.0, 0.0, 0.02, 1.0)
         self.ctx.enable(moderngl.DEPTH_TEST)
         self.ctx.enable(moderngl.BLEND)
-        self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)  # Re-enable (imgui's enable_only wipes it)
+        self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)
         self.ctx.blend_func = moderngl.ONE, moderngl.ONE  # Additive blending
-        self.ctx.depth_mask = False  # Don't write depth for particles (Pitfall 6)
+        self.ctx.depth_mask = False
 
         # Upload current era uniforms
         prog = self.particles.get_active_program()
         self._upload_uniforms_to_program(prog, config, state, physics_uniforms)
 
-        # Render particles
+        # Render particles directly to default framebuffer
         self.particles.render(proj_bytes, view_bytes)
 
         # Restore state
         self.ctx.depth_mask = True
         self.ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
-
-        # Post-processing bloom + tonemap -> screen
-        self.postfx.end_scene()
 
     # --- Input Handling ---
     # All 7 event types forwarded to imgui first (Pitfall 2 from research).

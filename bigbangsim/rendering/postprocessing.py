@@ -82,6 +82,31 @@ class PostProcessingPipeline:
             ctx.framebuffer(color_attachments=[self.blur_textures[1]]),
         ]
 
+        # --- Copy/blit shader (copies default FBO -> HDR texture) ---
+        _blit_vert = """
+#version 430
+in vec3 in_position;
+in vec2 in_texcoord_0;
+out vec2 v_texcoord;
+void main() {
+    gl_Position = vec4(in_position, 1.0);
+    v_texcoord = in_texcoord_0;
+}
+"""
+        _blit_frag = """
+#version 430
+in vec2 v_texcoord;
+uniform sampler2D u_source;
+out vec4 fragColor;
+void main() { fragColor = texture(u_source, v_texcoord); }
+"""
+        self._blit_prog = ctx.program(vertex_shader=_blit_vert, fragment_shader=_blit_frag)
+        self._blit_prog["u_source"].value = 0
+
+        # Default FBO texture (created on first use, captures screen content)
+        self._default_copy_tex = ctx.texture((width, height), 4)
+        self._default_copy_tex.filter = (moderngl.LINEAR, moderngl.LINEAR)
+
         # --- Load post-processing shader programs ---
         fs_vert = load_shader_source("postprocess/fullscreen.vert")
         self.bright_prog = ctx.program(
@@ -97,6 +122,19 @@ class PostProcessingPipeline:
             fragment_shader=load_shader_source("postprocess/tonemap.frag"),
         )
 
+    def _blit_default_to_hdr(self) -> None:
+        """Copy default FBO content into the HDR float texture.
+
+        Reads the default framebuffer into an RGBA8 texture, then blits
+        that onto the HDR FBO using a fullscreen quad. This promotes the
+        RGBA8 values to float for bloom extraction.
+        """
+        # Copy default FBO pixels into our RGBA8 texture
+        self.ctx.copy_framebuffer(self._default_copy_tex, self.ctx.fbo)
+        # Blit RGBA8 texture -> HDR FBO (already bound by caller)
+        self._default_copy_tex.use(location=0)
+        self._render_quad(self._blit_prog)
+
     def _render_quad(self, prog: moderngl.Program) -> None:
         """Render fullscreen quad with the given program."""
         key = prog.glo
@@ -108,9 +146,14 @@ class PostProcessingPipeline:
         self._quad_vaos[key].render(moderngl.TRIANGLE_STRIP)
 
     def begin_scene(self) -> None:
-        """Bind the HDR FBO for scene rendering. Call before rendering particles."""
-        self.hdr_fbo.use()
-        self.hdr_fbo.clear(0.0, 0.0, 0.0, 0.0)
+        """Bind the DEFAULT FBO for scene rendering.
+
+        AMD integrated GPUs have a driver bug where GL_POINTS cannot render
+        to user-created FBOs. Workaround: render particles to the default
+        framebuffer, then blit into the HDR texture for bloom processing.
+        """
+        self.ctx.fbo.use()
+        self.ctx.fbo.clear(0.0, 0.0, 0.0, 0.0)
 
     def end_scene(self, target_fbo=None) -> None:
         """Run the bloom + tone mapping chain, output to target_fbo or screen.
@@ -122,6 +165,13 @@ class PostProcessingPipeline:
         # Post-processing is 2D screen-space — disable depth test and blending
         self.ctx.disable(moderngl.DEPTH_TEST)
         self.ctx.disable(moderngl.BLEND)
+
+        # Copy default FBO content into HDR texture via blit shader
+        # (AMD workaround: particles rendered to default FBO, need to get
+        # that content into the float HDR texture for bloom extraction)
+        self.hdr_fbo.use()
+        self.hdr_fbo.clear(0.0, 0.0, 0.0, 0.0)
+        self._blit_default_to_hdr()
 
         # Pass 1: Bright-pass extraction -> bloom FBO (half-res)
         self.bloom_fbo.use()
@@ -177,6 +227,7 @@ class PostProcessingPipeline:
             height: New window height in pixels.
         """
         # Release old resources
+        self._default_copy_tex.release()
         self.hdr_texture.release()
         self.hdr_depth.release()
         self.hdr_fbo.release()
@@ -190,6 +241,8 @@ class PostProcessingPipeline:
         # Recreate at new size
         self.width = width
         self.height = height
+        self._default_copy_tex = self.ctx.texture((width, height), 4)
+        self._default_copy_tex.filter = (moderngl.LINEAR, moderngl.LINEAR)
         self.hdr_texture = self.ctx.texture((width, height), 4, dtype="f4")
         self.hdr_texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
         self.hdr_depth = self.ctx.depth_renderbuffer((width, height))
@@ -218,6 +271,7 @@ class PostProcessingPipeline:
 
     def release(self) -> None:
         """Release all GPU resources."""
+        self._default_copy_tex.release()
         self.hdr_texture.release()
         self.hdr_depth.release()
         self.hdr_fbo.release()

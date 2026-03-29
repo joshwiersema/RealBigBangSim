@@ -129,22 +129,21 @@ class TestPostProcessingMethods:
         pp, _ = _make_mock_pipeline()
         assert callable(pp.release)
 
-    def test_begin_scene_binds_hdr_fbo(self):
-        """begin_scene should use() and clear() the HDR FBO."""
-        pp, _ = _make_mock_pipeline()
+    def test_begin_scene_binds_default_fbo(self):
+        """begin_scene should use() and clear() the default FBO (AMD workaround)."""
+        pp, mock_ctx = _make_mock_pipeline()
         pp.begin_scene()
-        pp.hdr_fbo.use.assert_called_once()
-        pp.hdr_fbo.clear.assert_called_once()
+        mock_ctx.fbo.use.assert_called_once()
+        mock_ctx.fbo.clear.assert_called_once()
 
 
 class TestPostProcessingShaderLoading:
     """Test that shaders are loaded via load_shader_source."""
 
-    def test_loads_three_programs(self):
-        """Pipeline compiles 3 shader programs (bright, blur, tonemap)."""
+    def test_loads_four_programs(self):
+        """Pipeline compiles 4 shader programs (blit, bright, blur, tonemap)."""
         pp, mock_ctx = _make_mock_pipeline()
-        # 3 program() calls: bright_prog, blur_prog, tonemap_prog
-        assert mock_ctx.program.call_count == 3
+        assert mock_ctx.program.call_count == 4
 
     def test_has_bright_prog(self):
         """Pipeline has bright_prog attribute."""

@@ -239,6 +239,7 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         # Video recorder (CAPT-02, CAPT-03) -- None until recording starts
         self.recorder: VideoRecorder | None = None
         self._ffmpeg_available = VideoRecorder.is_available()
+        self._diag_frame = 0  # Frame counter for one-time pipeline diagnostic
 
         # Restore saved window state (RNDR-05)
         saved_state = load_window_state()
@@ -417,6 +418,54 @@ class BigBangSimApp(moderngl_window.WindowConfig):
             self._render_normal(
                 state, config, physics_uniforms, proj_bytes, view_bytes
             )
+
+        # --- ONE-TIME PIPELINE DIAGNOSTIC (frame 5) ---
+        self._diag_frame += 1
+        if self._diag_frame == 5:
+            import struct
+            print("\n=== PIPELINE DIAGNOSTIC (frame 5) ===")
+            # Read HDR FBO center pixel
+            self.postfx.hdr_fbo.use()
+            cx, cy = self.wnd.size[0] // 2, self.wnd.size[1] // 2
+            try:
+                hdr_px = struct.unpack("4e", self.postfx.hdr_fbo.read(
+                    viewport=(cx, cy, 1, 1), components=4, dtype="f2"))
+                print(f"HDR FBO center pixel: {hdr_px}")
+            except Exception as e:
+                print(f"HDR FBO read error: {e}")
+            # Read default FBO center pixel
+            self.ctx.fbo.use()
+            try:
+                def_px = self.ctx.fbo.read(viewport=(cx, cy, 1, 1), components=3)
+                print(f"Default FBO center pixel (RGB bytes): {tuple(def_px[:3])}")
+            except Exception as e:
+                print(f"Default FBO read error: {e}")
+            # Check postfx state
+            print(f"HDR texture size: {self.postfx.hdr_texture.size}")
+            print(f"Bloom texture size: {self.postfx.bloom_texture.size}")
+            print(f"Window size: {self.wnd.size}")
+            print(f"Exposure: {self.postfx.exposure}, Bloom: {self.postfx.bloom_strength}")
+            # Read a wider sample from HDR FBO
+            self.postfx.hdr_fbo.use()
+            try:
+                hdr_all = self.postfx.hdr_fbo.read(components=4, dtype="f2")
+                hdr_arr = np.frombuffer(hdr_all, dtype="float16")
+                nz = np.count_nonzero(hdr_arr)
+                mx = float(np.max(np.abs(hdr_arr)))
+                print(f"HDR FBO total: {nz}/{len(hdr_arr)} non-zero, max={mx:.4f}")
+            except Exception as e:
+                print(f"HDR FBO full read error: {e}")
+            # Read default FBO full
+            self.ctx.fbo.use()
+            try:
+                def_all = self.ctx.fbo.read(components=3)
+                def_arr = np.frombuffer(def_all, dtype="uint8")
+                nz_def = np.count_nonzero(def_arr)
+                mx_def = int(np.max(def_arr))
+                print(f"Default FBO total: {nz_def}/{len(def_arr)} non-zero, max={mx_def}")
+            except Exception as e:
+                print(f"Default FBO full read error: {e}")
+            print("=== END DIAGNOSTIC ===\n")
 
         # 14. HUD overlay (rendered AFTER post-processing, directly to default framebuffer)
         self._render_hud(state)

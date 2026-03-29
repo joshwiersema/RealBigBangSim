@@ -248,6 +248,15 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         # NVIDIA often enables this by default but the spec requires it)
         self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)
 
+        # Enable GL_POINT_SPRITE for Compatibility Profile contexts.
+        # moderngl_window creates a Compatibility Profile on AMD GPUs, where
+        # gl_PointCoord requires GL_POINT_SPRITE to be explicitly enabled.
+        # Without this, gl_PointCoord returns undefined values and soft_glow()
+        # discards ALL fragments, making particles invisible.
+        # In Core Profile this is a no-op (point sprites are always on).
+        GL_POINT_SPRITE = 0x8861
+        self.ctx.enable_direct(GL_POINT_SPRITE)
+
         # Simulation engine
         self.sim = SimulationEngine()
 
@@ -534,6 +543,7 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         self.ctx.enable(moderngl.DEPTH_TEST)
         self.ctx.enable(moderngl.BLEND)
         self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)  # Re-enable (imgui's enable_only wipes it)
+        self.ctx.enable_direct(0x8861)  # GL_POINT_SPRITE (Compat Profile)
         self.ctx.blend_func = moderngl.ONE, moderngl.ONE
         self.ctx.depth_mask = False
 
@@ -553,10 +563,16 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         self.ctx.depth_mask = True
         self.ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
 
-        # --- Render INCOMING era into HDR FBO ---
-        self.postfx.begin_scene()
+        # --- Render INCOMING era into scratch FBO ---
+        # Render to scratch FBO (not hdr_fbo) so the composite step can
+        # read scratch_tex + transition_texture and write to hdr_fbo without
+        # any read-write hazard.
+        self.postfx._scratch_fbo.use()
+        self.postfx._scratch_fbo.clear(0.01, 0.0, 0.02, 1.0)
         self.ctx.enable(moderngl.DEPTH_TEST)
         self.ctx.enable(moderngl.BLEND)
+        self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)
+        self.ctx.enable_direct(0x8861)  # GL_POINT_SPRITE (Compat Profile)
         self.ctx.blend_func = moderngl.ONE, moderngl.ONE
         self.ctx.depth_mask = False
 
@@ -572,7 +588,9 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         self.ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
 
         # --- Composite: blend outgoing + incoming into HDR FBO ---
-        self.transition.composite(self.postfx.hdr_texture, self.postfx.hdr_fbo)
+        # transition_texture (outgoing) + scratch_tex (incoming) -> hdr_fbo
+        # No read-write hazard: neither texture is attached to hdr_fbo.
+        self.transition.composite(self.postfx._scratch_tex, self.postfx.hdr_fbo)
 
         # --- Post-processing: bloom + tonemap on composited result ---
         self.postfx.end_scene()
@@ -595,6 +613,7 @@ class BigBangSimApp(moderngl_window.WindowConfig):
         self.ctx.enable(moderngl.DEPTH_TEST)
         self.ctx.enable(moderngl.BLEND)
         self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)
+        self.ctx.enable_direct(0x8861)  # GL_POINT_SPRITE (Compat Profile)
         self.ctx.blend_func = moderngl.ONE, moderngl.ONE  # Additive blending
         self.ctx.depth_mask = False
 

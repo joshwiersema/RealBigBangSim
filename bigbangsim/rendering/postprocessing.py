@@ -103,9 +103,15 @@ void main() { fragColor = texture(u_source, v_texcoord); }
         self._blit_prog = ctx.program(vertex_shader=_blit_vert, fragment_shader=_blit_frag)
         self._blit_prog["u_source"].value = 0
 
-        # Default FBO texture (created on first use, captures screen content)
-        self._default_copy_tex = ctx.texture((width, height), 4)
-        self._default_copy_tex.filter = (moderngl.LINEAR, moderngl.LINEAR)
+        # Scratch texture + FBO for transition compositing and framebuffer copies.
+        # Float format preserves HDR values during era transition crossfades.
+        self._scratch_tex = ctx.texture((width, height), 4, dtype="f4")
+        self._scratch_tex.filter = (moderngl.LINEAR, moderngl.LINEAR)
+        self._scratch_depth = ctx.depth_renderbuffer((width, height))
+        self._scratch_fbo = ctx.framebuffer(
+            color_attachments=[self._scratch_tex],
+            depth_attachment=self._scratch_depth,
+        )
 
         # --- Load post-processing shader programs ---
         fs_vert = load_shader_source("postprocess/fullscreen.vert")
@@ -125,14 +131,11 @@ void main() { fragColor = texture(u_source, v_texcoord); }
     def _blit_default_to_hdr(self) -> None:
         """Copy default FBO content into the HDR float texture.
 
-        Reads the default framebuffer into an RGBA8 texture, then blits
-        that onto the HDR FBO using a fullscreen quad. This promotes the
-        RGBA8 values to float for bloom extraction.
+        Reads the default framebuffer into a scratch texture, then blits
+        that onto the HDR FBO using a fullscreen quad.
         """
-        # Copy default FBO pixels into our RGBA8 texture
-        self.ctx.copy_framebuffer(self._default_copy_tex, self.ctx.fbo)
-        # Blit RGBA8 texture -> HDR FBO (already bound by caller)
-        self._default_copy_tex.use(location=0)
+        self.ctx.copy_framebuffer(self._scratch_tex, self.ctx.fbo)
+        self._scratch_tex.use(location=0)
         self._render_quad(self._blit_prog)
 
     def _render_quad(self, prog: moderngl.Program) -> None:
@@ -146,22 +149,84 @@ void main() { fragColor = texture(u_source, v_texcoord); }
         self._quad_vaos[key].render(moderngl.TRIANGLE_STRIP)
 
     def begin_scene(self) -> None:
-        """Bind the default FBO for scene rendering."""
-        self.ctx.fbo.use()
-        self.ctx.fbo.clear(0.01, 0.0, 0.02, 1.0)  # Very dark purple-black
+        """Bind the HDR FBO for scene rendering.
+
+        Particles render into the float HDR FBO so that bright values
+        above 1.0 are preserved for bloom extraction.
+        """
+        self.hdr_fbo.use()
+        self.hdr_fbo.clear(0.01, 0.0, 0.02, 1.0)  # Very dark purple-black
 
     def end_scene(self, target_fbo=None) -> None:
-        """Finalize the scene. Particles already rendered to default FBO.
+        """Run the full bloom + tonemap pipeline to screen.
 
-        Post-processing (bloom/tonemap) is skipped on AMD integrated GPUs
-        that cannot render to or copy from custom FBOs reliably. The raw
-        particle output is displayed directly. Additive blending produces
-        natural glow without needing bloom.
+        Pipeline:
+          1. Extract bright pixels from HDR texture -> bloom FBO
+          2. Gaussian blur (ping-pong, N iterations) -> blur FBOs
+          3. Composite HDR + bloom with Reinhard tonemap -> default FBO
+
+        Args:
+            target_fbo: Optional target framebuffer. Defaults to ctx.fbo (screen).
         """
-        # Particles are already in the default FBO — nothing to do.
-        # Restore GL state for imgui rendering.
+        output_fbo = target_fbo or self.ctx.fbo
+
+        # Disable depth/blend for fullscreen quad passes
         self.ctx.disable(moderngl.DEPTH_TEST)
         self.ctx.disable(moderngl.BLEND)
+
+        # --- Pass 1: Bright-pass extraction (full -> half res) ---
+        self.bloom_fbo.use()
+        self.bloom_fbo.clear(0.0, 0.0, 0.0, 1.0)
+        self.hdr_texture.use(location=0)
+        if 'u_scene' in self.bright_prog:
+            self.bright_prog['u_scene'].value = 0
+        if 'u_threshold' in self.bright_prog:
+            self.bright_prog['u_threshold'].value = self.bloom_threshold
+        self._render_quad(self.bright_prog)
+
+        # --- Passes 2-3: Gaussian blur (ping-pong) ---
+        horizontal = True
+        first_iteration = True
+        for _ in range(self.blur_iterations):
+            target_idx = 0 if horizontal else 1
+            self.blur_fbos[target_idx].use()
+            self.blur_fbos[target_idx].clear(0.0, 0.0, 0.0, 1.0)
+
+            # First iteration reads from bloom texture, rest read from ping-pong
+            if first_iteration:
+                self.bloom_texture.use(location=0)
+                first_iteration = False
+            else:
+                source_idx = 1 - target_idx
+                self.blur_textures[source_idx].use(location=0)
+
+            if 'u_image' in self.blur_prog:
+                self.blur_prog['u_image'].value = 0
+            if 'u_horizontal' in self.blur_prog:
+                self.blur_prog['u_horizontal'].value = horizontal
+            self._render_quad(self.blur_prog)
+            horizontal = not horizontal
+
+        # --- Pass 4: Composite + Reinhard tonemap -> screen ---
+        output_fbo.use()
+        output_fbo.clear(0.0, 0.0, 0.0, 1.0)
+
+        self.hdr_texture.use(location=0)
+        # Ping-pong pattern: iteration 0 writes idx 0, iteration 1 writes idx 1,
+        # iteration 2 writes idx 0, etc. So even iteration count -> last write
+        # was to idx 1 (the final iteration is odd-indexed); odd -> idx 0.
+        last_blur_idx = 1 if (self.blur_iterations % 2 == 0) else 0
+        self.blur_textures[last_blur_idx].use(location=1)
+
+        if 'u_scene' in self.tonemap_prog:
+            self.tonemap_prog['u_scene'].value = 0
+        if 'u_bloom' in self.tonemap_prog:
+            self.tonemap_prog['u_bloom'].value = 1
+        if 'u_exposure' in self.tonemap_prog:
+            self.tonemap_prog['u_exposure'].value = self.exposure
+        if 'u_bloom_strength' in self.tonemap_prog:
+            self.tonemap_prog['u_bloom_strength'].value = self.bloom_strength
+        self._render_quad(self.tonemap_prog)
 
     def resize(self, width: int, height: int) -> None:
         """Recreate FBOs for new window dimensions. Call on window resize.
@@ -171,7 +236,9 @@ void main() { fragColor = texture(u_source, v_texcoord); }
             height: New window height in pixels.
         """
         # Release old resources
-        self._default_copy_tex.release()
+        self._scratch_tex.release()
+        self._scratch_depth.release()
+        self._scratch_fbo.release()
         self.hdr_texture.release()
         self.hdr_depth.release()
         self.hdr_fbo.release()
@@ -185,8 +252,13 @@ void main() { fragColor = texture(u_source, v_texcoord); }
         # Recreate at new size
         self.width = width
         self.height = height
-        self._default_copy_tex = self.ctx.texture((width, height), 4)
-        self._default_copy_tex.filter = (moderngl.LINEAR, moderngl.LINEAR)
+        self._scratch_tex = self.ctx.texture((width, height), 4, dtype="f4")
+        self._scratch_tex.filter = (moderngl.LINEAR, moderngl.LINEAR)
+        self._scratch_depth = self.ctx.depth_renderbuffer((width, height))
+        self._scratch_fbo = self.ctx.framebuffer(
+            color_attachments=[self._scratch_tex],
+            depth_attachment=self._scratch_depth,
+        )
         self.hdr_texture = self.ctx.texture((width, height), 4, dtype="f4")
         self.hdr_texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
         self.hdr_depth = self.ctx.depth_renderbuffer((width, height))
@@ -215,7 +287,9 @@ void main() { fragColor = texture(u_source, v_texcoord); }
 
     def release(self) -> None:
         """Release all GPU resources."""
-        self._default_copy_tex.release()
+        self._scratch_tex.release()
+        self._scratch_depth.release()
+        self._scratch_fbo.release()
         self.hdr_texture.release()
         self.hdr_depth.release()
         self.hdr_fbo.release()

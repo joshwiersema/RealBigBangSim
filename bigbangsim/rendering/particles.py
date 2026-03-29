@@ -156,6 +156,8 @@ class ParticleSystem:
             self.compute["u_particle_count"].value = self.count
         if 'u_era' in self.compute:
             self.compute["u_era"].value = physics_state.current_era
+        if 'u_era_progress' in self.compute:
+            self.compute["u_era_progress"].value = physics_state.era_progress
 
         # Dispatch: ceiling division for workgroup count (local_size_x = 256)
         num_groups = (self.count + 255) // 256

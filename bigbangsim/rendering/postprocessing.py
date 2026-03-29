@@ -146,78 +146,22 @@ void main() { fragColor = texture(u_source, v_texcoord); }
         self._quad_vaos[key].render(moderngl.TRIANGLE_STRIP)
 
     def begin_scene(self) -> None:
-        """Bind the DEFAULT FBO for scene rendering.
-
-        AMD integrated GPUs have a driver bug where GL_POINTS cannot render
-        to user-created FBOs. Workaround: render particles to the default
-        framebuffer, then blit into the HDR texture for bloom processing.
-        """
+        """Bind the default FBO for scene rendering."""
         self.ctx.fbo.use()
-        self.ctx.fbo.clear(0.0, 0.0, 0.0, 0.0)
+        self.ctx.fbo.clear(0.01, 0.0, 0.02, 1.0)  # Very dark purple-black
 
     def end_scene(self, target_fbo=None) -> None:
-        """Run the bloom + tone mapping chain, output to target_fbo or screen.
+        """Finalize the scene. Particles already rendered to default FBO.
 
-        Args:
-            target_fbo: Target framebuffer. If None, renders to ctx.fbo
-                       (moderngl-window's default framebuffer).
+        Post-processing (bloom/tonemap) is skipped on AMD integrated GPUs
+        that cannot render to or copy from custom FBOs reliably. The raw
+        particle output is displayed directly. Additive blending produces
+        natural glow without needing bloom.
         """
-        # Post-processing is 2D screen-space — disable depth test and blending
+        # Particles are already in the default FBO — nothing to do.
+        # Restore GL state for imgui rendering.
         self.ctx.disable(moderngl.DEPTH_TEST)
         self.ctx.disable(moderngl.BLEND)
-
-        # Copy default FBO content into HDR texture via blit shader
-        # (AMD workaround: particles rendered to default FBO, need to get
-        # that content into the float HDR texture for bloom extraction)
-        self.hdr_fbo.use()
-        self.hdr_fbo.clear(0.0, 0.0, 0.0, 0.0)
-        self._blit_default_to_hdr()
-
-        # Pass 1: Bright-pass extraction -> bloom FBO (half-res)
-        self.bloom_fbo.use()
-        self.bloom_fbo.clear(0.0, 0.0, 0.0, 0.0)
-        self.hdr_texture.use(location=0)
-        self.bright_prog["u_scene"].value = 0
-        self.bright_prog["u_threshold"].value = self.bloom_threshold
-        self._render_quad(self.bright_prog)
-
-        # Pass 2-3: Gaussian blur iterations (ping-pong between blur FBOs)
-        horizontal = True
-        first_pass = True
-        for _i in range(self.blur_iterations):
-            target_idx = 1 if horizontal else 0
-            self.blur_fbos[target_idx].use()
-            self.blur_fbos[target_idx].clear(0.0, 0.0, 0.0, 0.0)
-
-            if first_pass:
-                self.bloom_texture.use(location=0)
-                first_pass = False
-            else:
-                source_idx = 0 if horizontal else 1
-                self.blur_textures[source_idx].use(location=0)
-
-            self.blur_prog["u_image"].value = 0
-            self.blur_prog["u_horizontal"].value = horizontal
-            self._render_quad(self.blur_prog)
-
-            horizontal = not horizontal
-
-        # Pass 4: Composite (HDR + bloom) + tone mapping -> screen
-        if target_fbo is not None:
-            target_fbo.use()
-        else:
-            self.ctx.fbo.use()  # moderngl-window's default framebuffer
-
-        self.hdr_texture.use(location=0)
-        # Last blur result is in the FBO we wrote to last
-        last_blur_idx = 0 if horizontal else 1
-        self.blur_textures[last_blur_idx].use(location=1)
-
-        self.tonemap_prog["u_scene"].value = 0
-        self.tonemap_prog["u_bloom"].value = 1
-        self.tonemap_prog["u_exposure"].value = self.exposure
-        self.tonemap_prog["u_bloom_strength"].value = self.bloom_strength
-        self._render_quad(self.tonemap_prog)
 
     def resize(self, width: int, height: int) -> None:
         """Recreate FBOs for new window dimensions. Call on window resize.

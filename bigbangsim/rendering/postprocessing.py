@@ -56,7 +56,7 @@ class PostProcessingPipeline:
         self._quad_vaos: dict[int, moderngl.VertexArray] = {}
 
         # --- HDR scene FBO (full resolution, RGBA16F) ---
-        self.hdr_texture = ctx.texture((width, height), 4, dtype="f2")
+        self.hdr_texture = ctx.texture((width, height), 4, dtype="f4")
         self.hdr_texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
         self.hdr_depth = ctx.depth_renderbuffer((width, height))
         self.hdr_fbo = ctx.framebuffer(
@@ -66,14 +66,14 @@ class PostProcessingPipeline:
 
         # --- Bloom FBO (half resolution for performance) ---
         hw, hh = width // 2, height // 2
-        self.bloom_texture = ctx.texture((hw, hh), 4, dtype="f2")
+        self.bloom_texture = ctx.texture((hw, hh), 4, dtype="f4")
         self.bloom_texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
         self.bloom_fbo = ctx.framebuffer(color_attachments=[self.bloom_texture])
 
         # --- Ping-pong blur FBOs (half resolution) ---
         self.blur_textures = [
-            ctx.texture((hw, hh), 4, dtype="f2"),
-            ctx.texture((hw, hh), 4, dtype="f2"),
+            ctx.texture((hw, hh), 4, dtype="f4"),
+            ctx.texture((hw, hh), 4, dtype="f4"),
         ]
         for tex in self.blur_textures:
             tex.filter = (moderngl.LINEAR, moderngl.LINEAR)
@@ -190,7 +190,7 @@ class PostProcessingPipeline:
         # Recreate at new size
         self.width = width
         self.height = height
-        self.hdr_texture = self.ctx.texture((width, height), 4, dtype="f2")
+        self.hdr_texture = self.ctx.texture((width, height), 4, dtype="f4")
         self.hdr_texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
         self.hdr_depth = self.ctx.depth_renderbuffer((width, height))
         self.hdr_fbo = self.ctx.framebuffer(
@@ -199,15 +199,15 @@ class PostProcessingPipeline:
         )
 
         hw, hh = width // 2, height // 2
-        self.bloom_texture = self.ctx.texture((hw, hh), 4, dtype="f2")
+        self.bloom_texture = self.ctx.texture((hw, hh), 4, dtype="f4")
         self.bloom_texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
         self.bloom_fbo = self.ctx.framebuffer(
             color_attachments=[self.bloom_texture]
         )
 
         self.blur_textures = [
-            self.ctx.texture((hw, hh), 4, dtype="f2"),
-            self.ctx.texture((hw, hh), 4, dtype="f2"),
+            self.ctx.texture((hw, hh), 4, dtype="f4"),
+            self.ctx.texture((hw, hh), 4, dtype="f4"),
         ]
         for tex in self.blur_textures:
             tex.filter = (moderngl.LINEAR, moderngl.LINEAR)

@@ -429,7 +429,7 @@ class BigBangSimApp(moderngl_window.WindowConfig):
             cx, cy = self.wnd.size[0] // 2, self.wnd.size[1] // 2
             try:
                 hdr_px = struct.unpack("4e", self.postfx.hdr_fbo.read(
-                    viewport=(cx, cy, 1, 1), components=4, dtype="f2"))
+                    viewport=(cx, cy, 1, 1), components=4, dtype="f4"))
                 print(f"HDR FBO center pixel: {hdr_px}")
             except Exception as e:
                 print(f"HDR FBO read error: {e}")
@@ -448,7 +448,7 @@ class BigBangSimApp(moderngl_window.WindowConfig):
             # Read a wider sample from HDR FBO
             self.postfx.hdr_fbo.use()
             try:
-                hdr_all = self.postfx.hdr_fbo.read(components=4, dtype="f2")
+                hdr_all = self.postfx.hdr_fbo.read(components=4, dtype="f4")
                 hdr_arr = np.frombuffer(hdr_all, dtype="float16")
                 nz = np.count_nonzero(hdr_arr)
                 mx = float(np.max(np.abs(hdr_arr)))

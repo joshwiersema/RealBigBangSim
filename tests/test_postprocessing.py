@@ -83,7 +83,7 @@ class TestPostProcessingDimensions:
         first_texture_call = mock_ctx.texture.call_args_list[0]
         assert first_texture_call[0][0] == (width, height)
         assert first_texture_call[0][1] == 4  # RGBA
-        assert first_texture_call[1].get("dtype") == "f2"
+        assert first_texture_call[1].get("dtype") == "f4"
 
     def test_bloom_textures_half_resolution(self):
         """Bloom/blur textures created at half resolution."""
